@@ -31,7 +31,7 @@ interface WalletState {
 }
 
 interface WalletContextType extends WalletState {
-  connect: () => Promise<void>;
+  connect: (type?: 'evm' | 'native') => Promise<void>;
   disconnect: () => Promise<void>;
   refreshBalance: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -55,69 +55,107 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   });
 
   // Connect wallet with signature-based authentication
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (type: 'evm' | 'native' = 'evm') => {
     setState(prev => ({ ...prev, loading: true, error: null, authLoading: true, authError: null }));
 
     try {
-      // 1. Connect Metamask wallet
-      const walletResult = await connectMetamask();
-      console.log('✅ Wallet connected:', walletResult.evmAddress);
+      let walletAddress: string;
+      let hederaId: string | null = null;
+      let signature: string;
+      let message: string;
+      let networkValue: string;
 
-      // 2. Create ethers provider for signing
-      if (!window.ethereum) {
-        throw new Error('No Ethereum provider found');
+      if (type === 'native') {
+        const { connectHederaNative, signMessageNative } = await import('@/lib/hederaWalletConnect');
+        const nativeResult = await connectHederaNative();
+        console.log('✅ Native Wallet connected:', nativeResult.accountId);
+
+        walletAddress = nativeResult.accountId;
+        hederaId = nativeResult.accountId;
+        networkValue = nativeResult.network;
+
+        const { generateAuthMessage } = await import('@/lib/auth/wallet-signature');
+        message = generateAuthMessage(walletAddress);
+
+        console.log('🖊️ Requesting native wallet signature...');
+        signature = await signMessageNative(walletAddress, message);
+        console.log('✅ Native signature obtained');
+      } else {
+        // 1. Connect Metamask wallet
+        const walletResult = await connectMetamask();
+        console.log('✅ Wallet connected:', walletResult.evmAddress);
+
+        walletAddress = walletResult.evmAddress;
+        hederaId = walletResult.accountId;
+        networkValue = walletResult.network;
+
+        // 2. Create ethers provider for signing
+        if (!window.ethereum) {
+          throw new Error('No Ethereum provider found');
+        }
+
+        const provider = new BrowserProvider(window.ethereum);
+
+        // 3. Request signature from user
+        console.log('🖊️ Requesting wallet signature...');
+        const { signature: sig, message: msg } = await requestWalletSignature(
+          walletAddress,
+          provider
+        );
+        signature = sig;
+        message = msg;
+        console.log('✅ Signature obtained');
       }
-
-      const provider = new BrowserProvider(window.ethereum);
-
-      // 3. Request signature from user
-      console.log('🖊️ Requesting wallet signature...');
-      const { signature, message } = await requestWalletSignature(
-        walletResult.evmAddress,
-        provider
-      );
-      console.log('✅ Signature obtained');
 
       // 4. Authenticate with backend (verify signature, create/update user, get JWT)
       console.log('🔐 Authenticating with backend...');
       const authResult = await authenticateWithSignature(
-        walletResult.evmAddress,
+        walletAddress,
         signature,
         message,
-        walletResult.accountId
+        hederaId || undefined
       );
       console.log('✅ Backend authentication successful');
 
       // 5. Set Supabase session with JWT tokens
       console.log('🔐 Setting Supabase session...');
-      console.log('  📏 Access token length:', authResult.access_token?.length || 0);
-      console.log('  📏 Refresh token length:', authResult.refresh_token?.length || 0);
-
       const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
         access_token: authResult.access_token,
         refresh_token: authResult.refresh_token,
       });
 
       if (sessionError) {
-        console.error('❌ Failed to set Supabase session:', sessionError);
-        console.error('Session error details:', sessionError);
         throw new Error('Failed to establish authentication session');
       }
 
-      console.log('✅ Supabase session established');
-      console.log('  🆔 Session ID:', sessionData.session?.id);
-      console.log('  ⏰ Session expires at:', sessionData.session?.expires_at);
-
       // 6. Fetch balance
-      const balance = await getBalance(walletResult.evmAddress);
+      let balance = 0;
+      try {
+        if (type === 'evm') {
+          balance = await getBalance(walletAddress);
+        } else {
+          const mirrorNodeUrl = networkValue === 'mainnet'
+            ? 'https://mainnet-public.mirrornode.hedera.com'
+            : 'https://testnet.mirrornode.hedera.com';
+          const response = await fetch(`${mirrorNodeUrl}/api/v1/balances?account.id=${walletAddress}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.balances && data.balances.length > 0) {
+              balance = data.balances[0].balance / 1e8; // Tinybars to Hbar
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch balance', err);
+      }
 
       // 7. Update state with all data
       setState({
         connected: true,
-        account: walletResult.evmAddress,
-        accountId: walletResult.accountId,
+        account: type === 'evm' ? walletAddress : null,
+        accountId: hederaId,
         balance,
-        network: walletResult.network,
+        network: networkValue,
         loading: false,
         error: null,
         user: authResult.user,
@@ -151,8 +189,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Sign out from Supabase
     await supabase.auth.signOut();
 
-    // Disconnect wallet
+    // Disconnect wallets
     disconnectWallet();
+
+    try {
+      const { disconnectHederaNative } = await import('@/lib/hederaWalletConnect');
+      await disconnectHederaNative();
+    } catch (err) { }
 
     // Reset state
     setState({
@@ -174,15 +217,29 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh balance
   const refreshBalance = useCallback(async () => {
-    if (!state.account) return;
+    if (!state.account && !state.accountId) return;
 
     try {
-      const balance = await getBalance(state.account);
-      setState(prev => ({ ...prev, balance }));
+      if (state.account) {
+        const balance = await getBalance(state.account);
+        setState(prev => ({ ...prev, balance }));
+      } else if (state.accountId) {
+        const mirrorNodeUrl = state.network === 'mainnet'
+          ? 'https://mainnet-public.mirrornode.hedera.com'
+          : 'https://testnet.mirrornode.hedera.com';
+        const response = await fetch(`${mirrorNodeUrl}/api/v1/balances?account.id=${state.accountId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.balances && data.balances.length > 0) {
+            const balance = data.balances[0].balance / 1e8; // Tinybars to Hbar
+            setState(prev => ({ ...prev, balance }));
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to refresh balance:', error);
     }
-  }, [state.account]);
+  }, [state.account, state.accountId, state.network]);
 
   // Refresh user data from database
   const refreshUser = useCallback(async () => {

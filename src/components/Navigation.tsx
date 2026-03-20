@@ -53,9 +53,9 @@ export function Navigation() {
     previousConnected.current = connected;
   }, [connected]);
 
-  const handleConnect = async () => {
+  const handleConnect = async (type: 'evm' | 'native' = 'evm') => {
     try {
-      await connect();
+      await connect(type);
     } catch (error: unknown) {
       console.error('Connection error:', error);
 
@@ -151,11 +151,10 @@ export function Navigation() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className={`px-4 py-2 rounded-full transition-all flex items-center gap-1 ${
-                    location.pathname === '/verify' || location.pathname === '/playground'
+                  className={`px-4 py-2 rounded-full transition-all flex items-center gap-1 ${location.pathname === '/verify' || location.pathname === '/playground'
                       ? 'bg-white/90 text-[#0084C7] shadow-[inset_-2px_-2px_8px_rgba(0,0,0,0.1),inset_2px_2px_8px_rgba(255,255,255,0.9)]'
                       : 'text-white/90 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   Verify Certificate
                   <ChevronDown className="w-4 h-4" />
@@ -189,13 +188,32 @@ export function Navigation() {
             {connected ? (
               <ProfileDropdown />
             ) : (
-              <Button
-                onClick={handleConnect}
-                disabled={loading}
-                className="bg-white text-[#0084C7] hover:bg-white/90 rounded-full px-6 md:px-8 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_-2px_-2px_8px_rgba(0,0,0,0.1),inset_2px_2px_8px_rgba(255,255,255,0.9)] disabled:opacity-50 disabled:cursor-not-allowed font-semibold hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] transition-all text-sm md:text-base"
-              >
-                {loading ? 'Connecting...' : 'Connect Wallet'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    disabled={loading}
+                    className="bg-white text-[#0084C7] hover:bg-white/90 rounded-full px-6 md:px-8 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_-2px_-2px_8px_rgba(0,0,0,0.1),inset_2px_2px_8px_rgba(255,255,255,0.9)] disabled:opacity-50 disabled:cursor-not-allowed font-semibold hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] transition-all text-sm md:text-base"
+                  >
+                    {loading ? 'Connecting...' : 'Connect Wallet'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-white border border-gray-200 shadow-xl rounded-xl p-2 z-50">
+                  <DropdownMenuItem onClick={() => handleConnect('native')} className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50">
+                    <span className="text-2xl drop-shadow-sm">🔷</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-900">HashPack / Blade</span>
+                      <span className="text-xs text-gray-500">Native Hedera Connection</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnect('evm')} className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-orange-50 focus:bg-orange-50">
+                    <span className="text-2xl drop-shadow-sm">🦊</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-900">MetaMask</span>
+                      <span className="text-xs text-gray-500">EVM Compatible Wallet</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
@@ -284,11 +302,10 @@ function NavButton({ label, to, active }: { label: string; to: string; active: b
   return (
     <Link
       to={to}
-      className={`px-3 py-2 rounded-full transition-all ${
-        active
+      className={`px-3 py-2 rounded-full transition-all ${active
           ? 'bg-white/90 text-[#0084C7] shadow-[inset_-2px_-2px_8px_rgba(0,0,0,0.1),inset_2px_2px_8px_rgba(255,255,255,0.9)]'
           : 'text-white/90 hover:bg-white/10'
-      }`}
+        }`}
     >
       {label}
     </Link>
@@ -310,11 +327,10 @@ function MobileNavButton({
     <Link
       to={to}
       onClick={onClick}
-      className={`w-full px-4 py-3 rounded-xl transition-all text-left font-medium ${
-        active
+      className={`w-full px-4 py-3 rounded-xl transition-all text-left font-medium ${active
           ? 'bg-white/20 text-white shadow-[inset_-2px_-2px_8px_rgba(0,0,0,0.1),inset_2px_2px_8px_rgba(255,255,255,0.1)]'
           : 'text-white/90 hover:bg-white/10'
-      }`}
+        }`}
     >
       {label}
     </Link>
