@@ -5,8 +5,8 @@ const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '645c8e5529b5
 const metadata = {
     name: "Web3Versity",
     description: "Web3 Education Platform",
-    url: "https://web3versity.netlify.app",
-    icons: ["https://web3versity.netlify.app/assets/w3v-logo.png"]
+    url: "https://web3varsity.netlify.app",
+    icons: ["https://web3varsity.netlify.app/assets/w3v-logo.png"]
 };
 
 // Initialize DAppConnector specifically for Hedera Testnet
