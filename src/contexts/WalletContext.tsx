@@ -78,16 +78,31 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const nativeResult = await connectHederaNative();
         console.log('✅ Native Wallet connected:', nativeResult.accountId);
 
-        walletAddress = nativeResult.accountId;
+        walletAddress = nativeResult.evmAddress || nativeResult.accountId;
         hederaId = nativeResult.accountId;
         networkValue = nativeResult.network;
 
-        const { generateAuthMessage } = await import('@/lib/auth/wallet-signature');
-        message = generateAuthMessage(walletAddress);
+        if (nativeResult.isEIP6963) {
+          // Treat it exactly as standard EVM Metamask!
+          if (!nativeResult.provider) throw new Error('No EIP-6963 provider returned');
+          const provider = new BrowserProvider(nativeResult.provider);
 
-        console.log('🖊️ Requesting native wallet signature...');
-        signature = await signMessageNative(walletAddress, message);
-        console.log('✅ Native signature obtained');
+          console.log('🖊️ Requesting EIP-6963 Native wallet signature...');
+          const { signature: sig, message: msg } = await requestWalletSignature(
+            walletAddress,
+            provider
+          );
+          signature = sig;
+          message = msg;
+          console.log('✅ Signature obtained via EIP-6963 Provider');
+        } else {
+          const { generateAuthMessage } = await import('@/lib/auth/wallet-signature');
+          message = generateAuthMessage(walletAddress);
+
+          console.log('🖊️ Requesting native WalletConnect signature...');
+          signature = await signMessageNative(walletAddress, message);
+          console.log('✅ Native signature obtained via WalletConnect');
+        }
       } else {
         // 1. Connect Metamask wallet
         const walletResult = await connectMetamask();

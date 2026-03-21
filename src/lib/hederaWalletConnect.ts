@@ -40,16 +40,81 @@ export async function initHederaWalletConnect() {
     }
 }
 
-export async function connectHederaNative() {
+// ======== EIP-6963 Provider Discovery ========
+interface EIP6963ProviderDetail {
+    info: { uuid: string; name: string; icon: string; rdns: string; };
+    provider: any;
+}
+let injectedProviders: EIP6963ProviderDetail[] = [];
+if (typeof window !== 'undefined') {
+    window.addEventListener("eip6963:announceProvider", (event: any) => {
+        injectedProviders.push(event.detail);
+    });
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+}
+
+export async function connectHederaNative(): Promise<any> {
+    // 1. Try to find HashPack or Blade via EIP-6963 first to bypass WalletConnect websockets
+    const nativeProviderDetail = injectedProviders.find(p =>
+        p.info.name.toLowerCase().includes('hashpack') ||
+        p.info.name.toLowerCase().includes('blade')
+    );
+
+    if (nativeProviderDetail) {
+        console.log(`🚀 Found native injected extension: ${nativeProviderDetail.info.name} (EIP-6963)`);
+        const provider = nativeProviderDetail.provider;
+
+        try {
+            // First switch to Hedera Testnet/Mainnet
+            await provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: isMainnet ? '0x127' : '0x128' }]
+            }).catch(async (error: any) => {
+                // If chain is unsupported (e.g., trying to add standard EVM via wallet_addEthereumChain), ignore
+                console.warn('Network switch warning:', error);
+            });
+
+            // Request accounts
+            const accounts = await provider.request({ method: 'eth_requestAccounts' });
+            if (accounts && accounts.length > 0) {
+                const evmAddress = accounts[0];
+                console.log(`✅ Connected via EIP-6963 Provider: ${evmAddress}`);
+
+                // Fetch the actual Hedera Account ID using our Mirror node helper
+                let accountId = '';
+                try {
+                    const mirrorUrl = isMainnet ? 'https://mainnet-public.mirrornode.hedera.com' : 'https://testnet.mirrornode.hedera.com';
+                    const response = await fetch(`${mirrorUrl}/api/v1/accounts/${evmAddress}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        accountId = data.account;
+                    }
+                } catch (e) {
+                    console.error('Mirror node lookup failed', e);
+                }
+
+                return {
+                    accountId: accountId || evmAddress,
+                    evmAddress,
+                    network: isMainnet ? 'mainnet' : 'testnet',
+                    isEIP6963: true,
+                    provider
+                };
+            }
+        } catch (error) {
+            console.error('EIP-6963 connection failed, falling back to WalletConnect', error);
+        }
+    }
+
+    // 2. Fallback to WalletConnect DAppConnector
     await initHederaWalletConnect();
 
     let session;
     const extensions = dAppConnector.extensions;
 
-    // Fallback to explicitly trying the extension first if detected
+    // Fallback to explicitly trying the WalletConnect extension injection first if detected
     if (extensions && extensions.length > 0) {
         try {
-            // Find hashpack explicitly if needed, or use the first available
             const hashpackExt = extensions.find(e => e.id.toLowerCase().includes('hashpack')) || extensions[0];
             console.log('Connecting via WalletConnect Extension directly:', hashpackExt.name);
             session = await dAppConnector.connectExtension(hashpackExt.id);
