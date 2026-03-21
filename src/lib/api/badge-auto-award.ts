@@ -197,13 +197,15 @@ async function awardBadgeToUser(userId: string, achievement: Achievement): Promi
     }
 
     // Award the badge
-    const { error: insertError } = await supabase
+    const { data: newUserAchievement, error: insertError } = await supabase
       .from('user_achievements')
       .insert({
         user_id: userId,
         achievement_id: achievement.id,
         earned_at: new Date().toISOString()
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('[awardBadgeToUser] Error awarding badge:', insertError);
@@ -214,6 +216,27 @@ async function awardBadgeToUser(userId: string, achievement: Achievement): Promi
         ...details,
         error: insertError.message
       };
+    }
+
+    // 🔥 NEW: Trigger Hedera NFT Badge Minting asynchronously via Supabase Edge Function!
+    // We don't await this directly to prevent blocking the UI, but it mints the NFT in the background.
+    if (newUserAchievement) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mint-badge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            userId,
+            achievementId: achievement.id,
+            userAchievementId: newUserAchievement.id
+          })
+        }).catch(e => console.error('Failed to trigger mint-badge Edge Function', e));
+      });
     }
 
     // Award XP bonus
