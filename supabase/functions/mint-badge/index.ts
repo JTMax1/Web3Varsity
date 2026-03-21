@@ -82,17 +82,18 @@ serve(async (req) => {
         // Retry Claim Flow (Transfer previously minted badge from treasury)
         if (retryClaim) {
             console.log('🔁 Executing Retroactive Claim Flow...');
-            isRetry = true;
             const { data: existingAchievement } = await supabase
                 .from('user_achievements')
                 .select('nft_transaction_id')
                 .eq('id', userAchievementId)
                 .single();
 
-            if (!existingAchievement?.nft_transaction_id) {
-                throw new Error('No previously minted badge found to retry');
+            if (existingAchievement?.nft_transaction_id) {
+                isRetry = true;
+                console.log('Retrying claim by minting fresh replica for immediate transfer...');
+            } else {
+                console.log('No previously minted badge found. Upgrading old badge via fresh mint...');
             }
-            console.log('Retrying claim by minting fresh replica for immediate transfer...');
         }
 
         // Standard Minting Flow

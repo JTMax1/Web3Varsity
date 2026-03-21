@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Award, TrendingUp, Flame, Calendar, Edit2, Check, X, Eye, EyeOff, Wallet, BookOpen, Trophy, Target, Lock, Download, ChevronDown, ChevronUp, Mail } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { BrowserProvider, Contract } from 'ethers';
+import { supabase } from '../../lib/supabase/client';
 import { useWallet } from '../../contexts/WalletContext';
 import { useUserStats } from '../../hooks/useStats';
 import { useCompletedCourses } from '../../hooks/useEnrollment';
@@ -16,7 +18,7 @@ import { CourseCompleteModal } from '../CourseCompleteModal';
 export function Profile() {
   const { username: urlUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user, refreshUser } = useWallet();
+  const { user, refreshUser, account } = useWallet();
 
   // Use URL username if provided, otherwise use current user
   const isOwnProfile = !urlUsername || urlUsername === user?.username;
@@ -63,6 +65,70 @@ export function Profile() {
   });
   const [showBadges, setShowBadges] = useState(false);
   const [showLockedBadges, setShowLockedBadges] = useState(false);
+  const [claimingIds, setClaimingIds] = useState<Record<string, boolean>>({});
+
+  const handleClaimBadge = async (badge: any) => {
+    if (!user || (!user.hedera_account_id && !user.wallet_address) || !badge.user_achievement_id) return;
+    setClaimingIds((prev: Record<string, boolean>) => ({ ...prev, [badge.id]: true }));
+    try {
+      // Only prompt Ethers token association if connected via EVM (MetaMask)
+      if (account && window.ethereum) {
+        toast.message('Please approve token association in your wallet...', { id: 'assoc' });
+        try {
+          const provider = new BrowserProvider(window.ethereum as any);
+          const signer = await provider.getSigner();
+          const tokenIdStr = badge.nft_token_id || import.meta.env.VITE_BADGE_COLLECTION_TOKEN_ID || "0.0.8311700";
+          const tokenHex = BigInt(tokenIdStr.split('.')[2]).toString(16).padStart(40, '0');
+          const tokenEvmAddress = `0x${tokenHex}`;
+          const evmAddress = await signer.getAddress();
+          const htsContract = new Contract("0x0000000000000000000000000000000000000167", ["function associateTokens(address account, address[] tokens) external returns (int64)"], signer);
+          const tx = await htsContract.associateTokens(evmAddress, [tokenEvmAddress]);
+          await tx.wait();
+          toast.success('Token Associated! Claiming badge...', { id: 'assoc' });
+        } catch (e: any) {
+          console.warn('Association skipped or failed:', e);
+          if (e.code === 4001 || e.code === 'ACTION_REJECTED') {
+            toast.error('Association rejected by user', { id: 'assoc' });
+            setClaimingIds((prev: Record<string, boolean>) => ({ ...prev, [badge.id]: false }));
+            return;
+          }
+          toast.message('Attempting claim to treasury...', { id: 'assoc' });
+        }
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const fnResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mint-badge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session?.access_token}`
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          achievementId: badge.id,
+          userAchievementId: badge.user_achievement_id,
+          retryClaim: true
+        })
+      });
+
+      const result = await fnResponse.json();
+      if (result.status === 'transferred') {
+        toast.success(`Badge "${badge.name}" sent to your wallet!`, { id: 'assoc' });
+        if (refreshUser) refreshUser();
+      } else {
+        const tokenIdStr = badge.nft_token_id || import.meta.env.VITE_BADGE_COLLECTION_TOKEN_ID || "0.0.8311700";
+        if (result.error?.includes('TOKEN_NOT_ASSOCIATED')) {
+          toast.error(`Please associate Token ID ${tokenIdStr} in your wallet and try again!`, { id: 'assoc', duration: 10000 });
+        } else {
+          toast.error(`Transfer issue: ${result.error || result.status}`, { id: 'assoc' });
+        }
+      }
+    } catch (e: any) {
+      toast.error('Failed to claim badge: ' + e.message, { id: 'assoc' });
+    } finally {
+      setClaimingIds((prev: Record<string, boolean>) => ({ ...prev, [badge.id]: false }));
+    }
+  };
 
   const isLoading = statsLoading || coursesLoading || badgesLoading;
   const memberSince = user.created_at ? format(new Date(user.created_at), 'MMMM yyyy') : 'Recently';
@@ -293,7 +359,7 @@ export function Profile() {
                   </>
                 )}
               </div>
-              
+
               {/* Stats */}
               <div className="flex flex-wrap gap-6 justify-center md:justify-start">
                 <StatBadge
@@ -369,48 +435,48 @@ export function Profile() {
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {completedCourses.map((enrollment) => (
-                <div
-                  key={enrollment.course_id}
-                  className="bg-white rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] transition-all"
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Trophy className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
-                        {(enrollment as any).course?.title || enrollment.courses?.title || 'Course Title'}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Completed {enrollment.completed_at ? format(new Date(enrollment.completed_at), 'MMM d, yyyy') : 'Recently'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="text-green-600 font-semibold">100%</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full w-full" />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setCertificateModal({
-                      show: true,
-                      courseId: enrollment.course_id,
-                      courseName: (enrollment as any).course?.title || enrollment.courses?.title || 'Course'
-                    })}
-                    className="mt-4 w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(251,191,36,0.3)]"
+                {completedCourses.map((enrollment) => (
+                  <div
+                    key={enrollment.course_id}
+                    className="bg-white rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] transition-all"
                   >
-                    <Award className="w-5 h-5" />
-                    View Certificate
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Trophy className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+                          {(enrollment as any).course?.title || enrollment.courses?.title || 'Course Title'}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Completed {enrollment.completed_at ? format(new Date(enrollment.completed_at), 'MMM d, yyyy') : 'Recently'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Progress</span>
+                        <span className="text-green-600 font-semibold">100%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full w-full" />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setCertificateModal({
+                        show: true,
+                        courseId: enrollment.course_id,
+                        courseName: (enrollment as any).course?.title || enrollment.courses?.title || 'Course'
+                      })}
+                      className="mt-4 w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(251,191,36,0.3)]"
+                    >
+                      <Award className="w-5 h-5" />
+                      View Certificate
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -452,7 +518,7 @@ export function Profile() {
                     {showBadges && (
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                         {allBadges.filter(b => b.earned).map((badge) => (
-                          <BadgeCard key={badge.id} badge={badge} earned={true} />
+                          <BadgeCard key={badge.id} badge={badge} earned={true} onClaim={handleClaimBadge} isClaiming={claimingIds[badge.id]} />
                         ))}
                       </div>
                     )}
@@ -538,7 +604,7 @@ function StatBadge({ icon, label, value, color }: { icon: React.ReactNode; label
   );
 }
 
-function BadgeCard({ badge, earned }: { badge: any; earned: boolean }) {
+function BadgeCard({ badge, earned, onClaim, isClaiming }: { badge: any; earned: boolean; onClaim?: (badge: any) => Promise<void> | void; isClaiming?: boolean; key?: string }) {
   const rarityColors = {
     common: {
       bg: 'from-gray-50 to-gray-100',
@@ -623,10 +689,21 @@ function BadgeCard({ badge, earned }: { badge: any; earned: boolean }) {
       )}
 
       {/* XP Reward Badge */}
-      <div className="mt-2 md:mt-3 flex items-center justify-center gap-1">
+      <div className="mt-2 md:mt-3 flex items-center justify-center gap-1 mb-2">
         <Award className="w-3 h-3 text-gray-500" />
         <span className="text-xs text-gray-600 font-medium">+{badge.xp_reward} XP</span>
       </div>
+
+      {/* Claim Button for Earned but Unclaimed */}
+      {earned && !badge.nft_minted_at && onClaim && (
+        <button
+          onClick={() => onClaim(badge)}
+          disabled={isClaiming}
+          className="mt-2 w-full py-2 bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white rounded-lg text-xs font-bold hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center"
+        >
+          {isClaiming ? 'Claiming...' : 'Claim to Wallet'}
+        </button>
+      )}
     </div>
   );
 }

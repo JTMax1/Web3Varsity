@@ -15,6 +15,7 @@ export interface BadgeWithEarnedStatus extends Achievement {
   earned_at?: string;
   nft_token_id?: string | null;
   nft_minted_at?: string | null;
+  user_achievement_id?: string;
 }
 
 export interface EarnedBadge extends Achievement {
@@ -129,7 +130,8 @@ export async function getUserBadgesWithStatus(userId: string): Promise<BadgeWith
         earned,
         earned_at: earnedDetails?.earned_at,
         nft_token_id: earnedDetails?.nft_token_id,
-        nft_minted_at: earnedDetails?.nft_minted_at
+        nft_minted_at: earnedDetails?.nft_minted_at,
+        user_achievement_id: earnedDetails?.user_achievement_id
       };
     });
 
