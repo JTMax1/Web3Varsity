@@ -174,16 +174,36 @@ export function BadgeEarnedModal({
                     </motion.div>
                   )}
 
-                  {/* Continue Button */}
-                  <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    onClick={onClose}
-                    className="w-full py-4 bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white rounded-2xl text-lg font-semibold shadow-[0_8px_24px_rgba(0,132,199,0.4)] hover:shadow-[0_12px_32px_rgba(0,132,199,0.5)] transition-all"
-                  >
-                    Awesome!
-                  </motion.button>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.7 }}
+                      onClick={() => {
+                        // First tell them to associate
+                        alert(`HEDERA SPAM PROTECTION:\n\nPlease open HashPack and 'Add Token' using ID: ${import.meta.env.VITE_BADGE_COLLECTION_TOKEN_ID || '0.0.8311700'}\n\nOnce added, your NFT will be securely transferred!`);
+
+                        // Optionally trigger retry here if you have userAchievementId in the payload
+                        // fetch('/functions/v1/mint-badge', { ... retryClaim: true })
+
+                        onClose();
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl text-md font-semibold shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Claim NFT to Wallet
+                    </motion.button>
+
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.8 }}
+                      onClick={onClose}
+                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl text-md font-semibold hover:bg-gray-200 transition-all"
+                    >
+                      Close
+                    </motion.button>
+                  </div>
                 </div>
               </div>
             </motion.div>
