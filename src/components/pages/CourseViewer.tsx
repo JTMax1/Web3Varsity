@@ -365,7 +365,7 @@ export function CourseViewer() {
                 <span className="text-[#0084C7]">{Math.round(progress)}%</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-[#0084C7] to-[#00a8e8] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(0,132,199,0.5)]"
                   style={{ width: `${progress}%` }}
                 />
@@ -391,26 +391,24 @@ export function CourseViewer() {
                       key={lesson.id}
                       onClick={() => goToLesson(index)}
                       disabled={isLocked}
-                      className={`w-full text-left p-3 rounded-xl transition-all ${
-                        isCurrent
-                          ? 'bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white shadow-[0_4px_12px_rgba(0,132,199,0.3)]'
-                          : isCompleted
+                      className={`w-full text-left p-3 rounded-xl transition-all ${isCurrent
+                        ? 'bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white shadow-[0_4px_12px_rgba(0,132,199,0.3)]'
+                        : isCompleted
                           ? 'bg-green-50 hover:bg-green-100'
                           : isLocked
-                          ? 'bg-gray-100 opacity-50 cursor-not-allowed'
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
+                            ? 'bg-gray-100 opacity-50 cursor-not-allowed'
+                            : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isCurrent
-                            ? 'bg-white/20'
-                            : isCompleted
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isCurrent
+                          ? 'bg-white/20'
+                          : isCompleted
                             ? 'bg-green-500'
                             : isLocked
-                            ? 'bg-gray-300'
-                            : 'bg-gray-200'
-                        }`}>
+                              ? 'bg-gray-300'
+                              : 'bg-gray-200'
+                          }`}>
                           {isCompleted ? (
                             <CheckCircle className="w-4 h-4 text-white" />
                           ) : isLocked ? (
@@ -422,14 +420,12 @@ export function CourseViewer() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-sm truncate ${
-                            isCurrent ? 'text-white' : isCompleted ? 'text-green-900' : 'text-gray-900'
-                          }`}>
+                          <div className={`text-sm truncate ${isCurrent ? 'text-white' : isCompleted ? 'text-green-900' : 'text-gray-900'
+                            }`}>
                             {lesson.title}
                           </div>
-                          <div className={`text-xs ${
-                            isCurrent ? 'text-white/80' : isCompleted ? 'text-green-700' : 'text-gray-500'
-                          }`}>
+                          <div className={`text-xs ${isCurrent ? 'text-white/80' : isCompleted ? 'text-green-700' : 'text-gray-500'
+                            }`}>
                             {lesson.duration} min
                           </div>
                         </div>

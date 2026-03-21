@@ -20,6 +20,7 @@ import { mockDiscussions } from './lib/mockData';
 import { Toaster } from './components/ui/sonner';
 import { WalletProvider } from './contexts/WalletContext';
 import { MetamaskPrompt } from './components/MetamaskPrompt';
+import { AITutor } from './components/ai/AITutor';
 
 function AppContent() {
 
@@ -172,6 +173,7 @@ function AppContent() {
           },
         }}
       />
+      <AITutor />
     </div>
   );
 }
