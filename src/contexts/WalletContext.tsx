@@ -54,6 +54,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     authError: null,
   });
 
+  useEffect(() => {
+    // Eagerly initialize the WalletConnect Hedera Connector so any Hashpack extensions natively injected
+    // into the browser are discovered and mapped BEFORE the user clicks "Connect"
+    import('@/lib/hederaWalletConnect')
+      .then(m => m.initHederaWalletConnect())
+      .catch(e => console.warn('Silent early WC init failure:', e));
+  }, []);
+
   // Connect wallet with signature-based authentication
   const connect = useCallback(async (type: 'evm' | 'native' = 'evm') => {
     setState(prev => ({ ...prev, loading: true, error: null, authLoading: true, authError: null }));

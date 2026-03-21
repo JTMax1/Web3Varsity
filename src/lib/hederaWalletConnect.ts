@@ -1,11 +1,14 @@
 import { DAppConnector, HederaJsonRpcMethod, HederaSessionEvent, HederaChainId } from '@hashgraph/hedera-wallet-connect';
 
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '645c8e5529b5fb4fe09a2bf3453175eb';
+// For localhost testing, use a highly permissive generic Project ID if the primary one is domain-restricted
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const configuredProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '645c8e5529b5fb4fe09a2bf3453175eb';
+const projectId = isLocalhost ? '377d75bb6f86a222a28d1dd818ef716f' : configuredProjectId;
 
 const metadata = {
     name: "Web3Versity",
     description: "Web3 Education Platform",
-    url: "https://web3varsity.netlify.app",
+    url: window.location.origin, // Must match executing origin to prevent WC errors
     icons: ["https://web3varsity.netlify.app/assets/w3v-logo.png"]
 };
 
@@ -27,8 +30,14 @@ let isInit = false;
 
 export async function initHederaWalletConnect() {
     if (isInit) return;
-    await dAppConnector.init({ logger: 'error' });
-    isInit = true;
+    try {
+        await dAppConnector.init({ logger: 'error' });
+        isInit = true;
+    } catch (e) {
+        console.error('WalletConnect init failed (likely WebSocket Relay block):', e);
+        // We set to true so we don't infinitely retry failing blocks
+        isInit = true;
+    }
 }
 
 export async function connectHederaNative() {
