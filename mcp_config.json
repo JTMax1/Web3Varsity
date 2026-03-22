@@ -1,0 +1,20 @@
+{
+    "description": "Hashnet MCP Server integration to expose the Web3Varsity AI Tutor to Model Context Protocol clients like Cursor or Claude Desktop.",
+    "mcpServers": {
+        "web3varsity-ai-tutor": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@hol-org/hashnet-mcp",
+                "up",
+                "--transport",
+                "stdio"
+            ],
+            "env": {
+                "REGISTRY_BROKER_API_URL": "https://hol.org/registry/api/v1",
+                "REGISTRY_BROKER_API_KEY": "YOUR_HOL_API_KEY_HERE"
+            }
+        }
+    }
+}
