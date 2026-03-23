@@ -12,6 +12,7 @@
  */
 
 import { env } from '@/config';
+import { IWalletProvider } from '@/lib/wallet/provider-utils';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -118,19 +119,13 @@ export function detectWallet(): boolean {
 }
 
 /**
- * Check if wallet is supported
- * @returns true if any Web3 wallet is installed
+ * Get the Ethereum provider
+ * @param provider - Unified wallet provider
+ * @returns The provider to use
  */
-export function isWalletSupported(): boolean {
-  return detectWallet();
-}
+function getEffectiveProvider(provider?: IWalletProvider) {
+  if (provider) return provider;
 
-/**
- * Get the Ethereum provider (Metamask)
- * Forces use of Metamask to avoid conflicts with Hashgraph SDK wallet detection
- * @throws Error if Metamask is not installed
- */
-function getProvider() {
   if (typeof window === 'undefined' || !window.ethereum) {
     throw new Error('No Web3 wallet detected. Please install Metamask to use this app.');
   }
@@ -237,11 +232,12 @@ export async function getHederaAccountId(evmAddress: string): Promise<string> {
 
 /**
  * Get current chain ID from Metamask
+ * @param provider - Unified wallet provider
  * @returns Chain ID as decimal number
  */
-export async function getCurrentChainId(): Promise<number> {
-  const provider = getProvider();
-  const chainIdHex = await provider.request({ method: 'eth_chainId' });
+export async function getCurrentChainId(provider?: IWalletProvider): Promise<number> {
+  const effectiveProvider = getEffectiveProvider(provider);
+  const chainIdHex = await effectiveProvider.request({ method: 'eth_chainId' });
   return parseInt(chainIdHex, 16);
 }
 
@@ -267,13 +263,14 @@ export async function isOnHederaTestnet(): Promise<boolean> {
  * @returns true if network was added/switched successfully
  */
 export async function addHederaNetwork(
-  networkType: 'testnet' | 'mainnet' = 'testnet'
+  networkType: 'testnet' | 'mainnet' = 'testnet',
+  provider?: IWalletProvider
 ): Promise<boolean> {
-  const provider = getProvider();
+  const effectiveProvider = getEffectiveProvider(provider);
   const config = networkType === 'testnet' ? HEDERA_TESTNET_CONFIG : HEDERA_MAINNET_CONFIG;
 
   try {
-    await provider.request({
+    await effectiveProvider.request({
       method: 'wallet_addEthereumChain',
       params: [config],
     });
@@ -299,13 +296,14 @@ export async function addHederaNetwork(
  * @returns true if switched successfully
  */
 export async function switchToHederaNetwork(
-  networkType: 'testnet' | 'mainnet' = 'testnet'
+  networkType: 'testnet' | 'mainnet' = 'testnet',
+  provider?: IWalletProvider
 ): Promise<boolean> {
-  const provider = getProvider();
+  const effectiveProvider = getEffectiveProvider(provider);
   const config = networkType === 'testnet' ? HEDERA_TESTNET_CONFIG : HEDERA_MAINNET_CONFIG;
 
   try {
-    await provider.request({
+    await effectiveProvider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: config.chainId }],
     });
@@ -347,14 +345,14 @@ export async function switchToHederaTestnet(): Promise<boolean> {
  * @returns Wallet connection result with account ID and EVM address
  * @throws Error if connection fails or user rejects
  */
-export async function connectWallet(): Promise<WalletConnectionResult> {
-  const provider = getProvider();
+export async function connectWallet(provider?: IWalletProvider): Promise<WalletConnectionResult> {
+  const effectiveProvider = getEffectiveProvider(provider);
 
   try {
     console.log('🔌 Initiating wallet connection...');
 
     // Step 1: Request account access
-    const accounts = await provider.request({
+    const accounts = await effectiveProvider.request({
       method: 'eth_requestAccounts',
     }) as string[];
 
@@ -377,7 +375,7 @@ export async function connectWallet(): Promise<WalletConnectionResult> {
 
       try {
         // First try to switch (in case network already exists)
-        await provider.request({
+        await effectiveProvider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: HEDERA_TESTNET_CONFIG.chainId }],
         });
@@ -388,7 +386,7 @@ export async function connectWallet(): Promise<WalletConnectionResult> {
           console.log('📡 Hedera Testnet not found. Adding network to Metamask...');
 
           try {
-            await provider.request({
+            await effectiveProvider.request({
               method: 'wallet_addEthereumChain',
               params: [HEDERA_TESTNET_CONFIG],
             });
@@ -470,8 +468,8 @@ export async function isWalletConnected(): Promise<boolean> {
   if (!detectMetamask()) return false;
 
   try {
-    const provider = getProvider();
-    const accounts = await provider.request({
+    const provider = getEffectiveProvider();
+    const accounts = await effectiveProvider.request({
       method: 'eth_accounts',
     }) as string[];
 
@@ -494,19 +492,27 @@ export async function isWalletConnected(): Promise<boolean> {
  * @returns Cleanup function to remove listener
  */
 export function listenToAccountChanges(
-  callback: (accounts: string[]) => void
+  callback: (accounts: string[]) => void,
+  provider?: IWalletProvider
 ): () => void {
-  const provider = getProvider();
+  const effectiveProvider = getEffectiveProvider(provider);
+
+  if (!effectiveProvider.on) {
+    console.warn('Provider does not support event listeners');
+    return () => { };
+  }
 
   const handleAccountsChanged = (accounts: string[]) => {
     callback(accounts);
   };
 
-  provider.on('accountsChanged', handleAccountsChanged);
+  effectiveProvider.on('accountsChanged', handleAccountsChanged);
 
   // Return cleanup function
   return () => {
-    provider.removeListener('accountsChanged', handleAccountsChanged);
+    if (effectiveProvider.removeListener) {
+      effectiveProvider.removeListener('accountsChanged', handleAccountsChanged);
+    }
   };
 }
 
@@ -518,19 +524,27 @@ export function listenToAccountChanges(
  * @returns Cleanup function to remove listener
  */
 export function listenToChainChanges(
-  callback: (chainId: string) => void
+  callback: (chainId: string) => void,
+  provider?: IWalletProvider
 ): () => void {
-  const provider = getProvider();
+  const effectiveProvider = getEffectiveProvider(provider);
+
+  if (!effectiveProvider.on) {
+    console.warn('Provider does not support event listeners');
+    return () => { };
+  }
 
   const handleChainChanged = (chainId: string) => {
     callback(chainId);
   };
 
-  provider.on('chainChanged', handleChainChanged);
+  effectiveProvider.on('chainChanged', handleChainChanged);
 
   // Return cleanup function
   return () => {
-    provider.removeListener('chainChanged', handleChainChanged);
+    if (effectiveProvider.removeListener) {
+      effectiveProvider.removeListener('chainChanged', handleChainChanged);
+    }
   };
 }
 
@@ -543,14 +557,15 @@ export function listenToChainChanges(
  * Queries via eth_getBalance and converts from wei to HBAR
  *
  * @param address - EVM address to query
+ * @param provider - Unified wallet provider
  * @returns Balance in HBAR (not tinybars)
  */
-export async function getBalance(address: string): Promise<number> {
-  const provider = getProvider();
+export async function getBalance(address: string, provider?: IWalletProvider): Promise<number> {
+  const effectiveProvider = getEffectiveProvider(provider);
 
   try {
     // Get balance in wei (smallest unit)
-    const balanceWei = await provider.request({
+    const balanceWei = await effectiveProvider.request({
       method: 'eth_getBalance',
       params: [address, 'latest'],
     }) as string;
@@ -574,8 +589,8 @@ export async function getBalance(address: string): Promise<number> {
  * @param address - EVM address
  * @returns Formatted balance with HBAR symbol
  */
-export async function getFormattedBalance(address: string): Promise<string> {
-  const balance = await getBalance(address);
+export async function getFormattedBalance(address: string, provider?: IWalletProvider): Promise<string> {
+  const balance = await getBalance(address, provider);
   return formatHbar(balance);
 }
 
@@ -597,14 +612,19 @@ export async function getFormattedBalance(address: string): Promise<string> {
 export async function submitTransaction(
   fromAccountId: string,
   toAccountId: string,
-  amount: number
+  amount: number,
+  provider?: IWalletProvider
 ): Promise<TransactionResult> {
-  const provider = getProvider();
+  const effectiveProvider = getEffectiveProvider(provider);
 
   try {
     // Convert accounts to EVM address format if needed
     let fromAddress = fromAccountId;
     let toAddress = toAccountId;
+
+    if (!fromAccountId) {
+      throw new Error('Sender account identifier (EVM address or Hedera ID) is required');
+    }
 
     // If sender is in Hedera format (0.0.xxxxx), convert to EVM
     if (fromAccountId.startsWith('0.0.')) {
@@ -629,10 +649,10 @@ export async function submitTransaction(
       gas: '0x5208', // 21000 gas for simple transfer
     };
 
-    console.log('🚀 Submitting transaction via Metamask...');
+    console.log('🚀 Submitting transaction via Wallet Provider...');
 
     // Request user to sign transaction
-    const txHash = await provider.request({
+    const txHash = await effectiveProvider.request({
       method: 'eth_sendTransaction',
       params: [txParams],
     }) as string;
@@ -646,7 +666,7 @@ export async function submitTransaction(
 
     while (!receipt && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      receipt = await provider.request({
+      receipt = await effectiveProvider.request({
         method: 'eth_getTransactionReceipt',
         params: [txHash],
       });
@@ -801,22 +821,26 @@ export function parseMetamaskError(error: any): string {
  * @param tokenId - Hedera token ID (e.g., "0.0.123456")
  * @returns Transaction result with status and explorer URL
  */
-export async function associateToken(tokenId: string): Promise<TransactionResult> {
-  if (!window.ethereum) {
-    throw new Error('Metamask not detected');
-  }
+/**
+ * Associate a token with the user's account (user must sign transaction)
+ * Required before receiving NFTs on Hedera
+ *
+ * @param tokenId - Hedera token ID (e.g., "0.0.123456")
+ * @param provider - Unified wallet provider
+ * @returns Transaction result with status and explorer URL
+ */
+export async function associateToken(tokenId: string, provider?: IWalletProvider): Promise<TransactionResult> {
+  const effectiveProvider = getEffectiveProvider(provider);
 
   try {
     console.log(`🔗 Associating token ${tokenId} with account...`);
     console.time('Token Association Total Time');
 
-    // Get user's account (may be slow if MetaMask is loading)
-    console.log('⏳ Requesting accounts from MetaMask...');
-    console.time('MetaMask Account Request');
-    const accounts = await window.ethereum.request({
+    // Get user's account
+    console.log('⏳ Requesting accounts from provider...');
+    const accounts = await effectiveProvider.request({
       method: 'eth_requestAccounts',
     }) as string[];
-    console.timeEnd('MetaMask Account Request');
 
     if (!accounts || accounts.length === 0) {
       throw new Error('No account connected');
@@ -829,7 +853,6 @@ export async function associateToken(tokenId: string): Promise<TransactionResult
     const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
 
     // Convert Hedera token ID to address format
-    // Token ID format: 0.0.XXXXX -> Need to convert to address
     const tokenIdParts = tokenId.split('.');
     const tokenNum = parseInt(tokenIdParts[2]);
     const tokenAddress = '0x' + tokenNum.toString(16).padStart(40, '0');
@@ -844,42 +867,33 @@ export async function associateToken(tokenId: string): Promise<TransactionResult
 
     const data = functionSelector + encodedUserAddress + encodedTokenAddress;
 
-    // Send transaction (MetaMask popup will appear here)
-    console.log('⏳ Sending transaction to MetaMask for signing...');
-    console.time('MetaMask Transaction Signing');
-    const txHash = await window.ethereum.request({
+    // Send transaction
+    console.log('⏳ Sending transaction for signing...');
+    const txHash = await effectiveProvider.request({
       method: 'eth_sendTransaction',
       params: [{
         from: userAddress,
         to: HTS_ADDRESS,
         data: data,
-        // gas: '0x100000', // 1,048,576 gas limit removed cause it slows metamask. Not needed since this is just a testnet app
       }],
     }) as string;
-    console.timeEnd('MetaMask Transaction Signing');
 
     console.log(`✅ Token association transaction sent: ${txHash}`);
 
     // Wait for transaction receipt
     console.log('⏳ Waiting for transaction confirmation...');
-    console.time('Transaction Confirmation');
     let receipt = null;
     let attempts = 0;
     const maxAttempts = 30; // 30 seconds timeout
 
     while (!receipt && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      receipt = await window.ethereum.request({
+      receipt = await effectiveProvider.request({
         method: 'eth_getTransactionReceipt',
         params: [txHash],
       });
       attempts++;
-
-      if (attempts % 5 === 0) {
-        console.log(`Still waiting... (${attempts}/${maxAttempts} seconds)`);
-      }
     }
-    console.timeEnd('Transaction Confirmation');
 
     if (!receipt) {
       throw new Error('Transaction receipt not found after 30 seconds');
@@ -888,7 +902,6 @@ export async function associateToken(tokenId: string): Promise<TransactionResult
     // Check if transaction succeeded
     const success = receipt.status === '0x1' || receipt.status === 1;
 
-    console.timeEnd('Token Association Total Time');
     console.log(`🎉 Token association ${success ? 'successful' : 'failed'}!`);
 
     return {
@@ -898,9 +911,7 @@ export async function associateToken(tokenId: string): Promise<TransactionResult
       timestamp: Date.now(),
     };
   } catch (error: any) {
-    console.timeEnd('Token Association Total Time');
     console.error('❌ Token association failed:', error);
-    console.error('Token association error:', error);
     throw new Error(parseMetamaskError(error));
   }
 }
@@ -912,13 +923,20 @@ export async function associateToken(tokenId: string): Promise<TransactionResult
  * @param accountAddress - User's EVM address
  * @returns true if associated, false otherwise
  */
+/**
+ * Check if a token is already associated with the user's account
+ *
+ * @param tokenId - Hedera token ID
+ * @param accountAddress - User's EVM address
+ * @param provider - Unified wallet provider
+ * @returns true if associated, false otherwise
+ */
 export async function isTokenAssociated(
   tokenId: string,
-  accountAddress: string
+  accountAddress: string,
+  provider?: IWalletProvider
 ): Promise<boolean> {
-  if (!window.ethereum) {
-    return false;
-  }
+  const effectiveProvider = getEffectiveProvider(provider);
 
   try {
     const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
@@ -928,15 +946,13 @@ export async function isTokenAssociated(
     const tokenNum = parseInt(tokenIdParts[2]);
     const tokenAddress = '0x' + tokenNum.toString(16).padStart(40, '0');
 
-    // Function selector for isAssociated(address,address) - custom, may not exist
-    // Instead, we'll try to get token balance - if it works, token is associated
     // Function selector for balanceOf(address,address): 0xf7888aec
     const functionSelector = '0xf7888aec';
     const encodedUserAddress = accountAddress.slice(2).padStart(64, '0');
     const encodedTokenAddress = tokenAddress.slice(2).padStart(64, '0');
     const data = functionSelector + encodedTokenAddress + encodedUserAddress;
 
-    const result = await window.ethereum.request({
+    const result = await effectiveProvider.request({
       method: 'eth_call',
       params: [{
         to: HTS_ADDRESS,

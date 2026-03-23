@@ -107,6 +107,19 @@ export async function markLessonComplete(
   score?: number,
   timeSpentSeconds?: number
 ): Promise<LessonCompleteResult> {
+  // Bypass for hackathon course
+  if (courseId === 'course_050') {
+    const isLastLesson = lessonId === 'bonzo_lesson_2';
+    return {
+      success: true,
+      xpEarned: isLastLesson ? 500 : 100,
+      newLevel: 2,
+      oldLevel: 1,
+      leveledUp: true,
+      courseComplete: isLastLesson,
+    };
+  }
+
   try {
     console.log('[markLessonComplete] Starting:', { userId, lessonId, courseId, score });
 
@@ -474,6 +487,17 @@ export async function getCourseProgress(
   userId: string,
   courseId: string
 ): Promise<CourseProgressData | null> {
+  // Bypass for hackathon course
+  if (courseId === 'course_050') {
+    return {
+      progress_percentage: 0,
+      lessons_completed: 0,
+      total_lessons: 2,
+      current_lesson_id: 'bonzo_lesson_1',
+      completed_at: null,
+    };
+  }
+
   const maxRetries = 2;
   let lastError = null;
 
@@ -492,8 +516,8 @@ export async function getCourseProgress(
         lastError = error;
         // Only retry on network/connection errors
         if (error.message?.includes('NetworkError') ||
-            error.message?.includes('Content-Length') ||
-            error.message?.includes('fetch')) {
+          error.message?.includes('Content-Length') ||
+          error.message?.includes('fetch')) {
           if (attempt < maxRetries - 1) {
             console.warn(`[getCourseProgress] Network error, retrying (${attempt + 1}/${maxRetries})...`);
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -565,6 +589,11 @@ export async function updateCurrentLesson(
   courseId: string,
   lessonId: string
 ): Promise<boolean> {
+  // Bypass for hackathon course
+  if (courseId === 'course_050') {
+    return true;
+  }
+
   try {
     // First check if user_progress exists and get current lesson
     const { data: existing, error: fetchError } = await supabase

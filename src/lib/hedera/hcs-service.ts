@@ -13,6 +13,7 @@ import {
   PrivateKey,
   Transaction,
 } from '@hashgraph/sdk';
+import type { IWalletProvider } from '../wallet/provider-utils';
 
 // Extend window type for Ethereum provider
 declare global {
@@ -112,24 +113,16 @@ export async function submitTopicMessage(
  * The user's wallet signs a message to prove authorization, then the backend
  * submits the actual HCS transaction.
  *
+ * @param provider - Unified wallet provider
  * @param params - Message submission parameters
  * @returns Submit result with REAL transaction details verifiable on HashScan
  */
 export async function submitTopicMessageClientSide(
+  provider: IWalletProvider,
   params: SubmitMessageParams
 ): Promise<SubmitMessageResult> {
   try {
-    console.log('📤 Submitting REAL HCS message to Hedera testnet...');
-
-    // Get Metamask provider for wallet verification
-    if (typeof window === 'undefined' || !window.ethereum) {
-      return {
-        success: false,
-        error: 'Wallet not found. Please install Metamask or HashPack.',
-      };
-    }
-
-    const provider = window.ethereum;
+    console.log(`📤 Submitting REAL HCS message to Hedera testnet via ${provider.name}...`);
 
     // Request wallet connection
     let accounts: string[];
@@ -206,9 +199,9 @@ export async function submitTopicMessageClientSide(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
+        } as any,
         body: JSON.stringify({
           topicId: params.topicId,
           message: params.message,

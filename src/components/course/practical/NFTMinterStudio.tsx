@@ -40,7 +40,10 @@ const CATEGORIES = [
   'Art', 'Music', 'Photography', 'Digital', 'Collectible', 'Gaming'
 ];
 
+import { useWallet } from '../../../contexts/WalletContext';
+
 export const NFTMinterStudio: React.FC<NFTMinterStudioProps> = ({ onInteract }) => {
+  const { activeProvider, accountId } = useWallet();
   const [step, setStep] = useState<'select' | 'customize' | 'mint' | 'success'>('select');
   const [selectedImage, setSelectedImage] = useState<typeof PRESET_IMAGES[0] | null>(null);
   const [metadata, setMetadata] = useState<NFTMetadata>({
@@ -96,19 +99,23 @@ export const NFTMinterStudio: React.FC<NFTMinterStudioProps> = ({ onInteract }) 
 
   const handleMintNFT = async () => {
     if (!selectedImage) return;
+    if (!activeProvider) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
 
     setIsMinting(true);
     setStep('mint');
 
     try {
       // Call client-side NFT minting (prompts wallet signature)
-      const result = await mintNFTClientSide({
+      const result = await mintNFTClientSide(activeProvider, {
         name: metadata.name,
         description: metadata.description,
         category: metadata.category,
         imageData: selectedImage.emoji,
         attributes: metadata.attributes,
-        creatorAccountId: 'student',
+        creatorAccountId: accountId || 'student',
       });
 
       if (!result.success) {

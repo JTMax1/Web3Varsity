@@ -16,26 +16,11 @@ import {
   tinybarsToHbar,
 } from './validation';
 import { supabase } from '../supabase/client';
+import type { IWalletProvider } from '../wallet/provider-utils';
 
 // Hedera Mirror Node API base URL
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
 
-// Helper to get Metamask provider without SDK interference
-function getMetamaskProvider() {
-  if (typeof window === 'undefined' || !window.ethereum) {
-    throw new Error('Metamask not found');
-  }
-
-  // If multiple providers exist, find Metamask
-  if ((window.ethereum as any).providers) {
-    const providers = (window.ethereum as any).providers;
-    const metamask = providers.find((p: any) => p.isMetaMask);
-    if (metamask) return metamask;
-  }
-
-  // Return default provider
-  return window.ethereum;
-}
 
 /**
  * Get the EVM address for a Hedera account ID from Mirror Node
@@ -109,6 +94,7 @@ export interface TransactionHistoryItem {
  *
  * REAL IMPLEMENTATION - Uses Metamask to sign transactions
  *
+ * @param provider - Unified wallet provider
  * @param senderAccountId - Sender's Hedera account ID or EVM address
  * @param recipientId - Recipient's Hedera account ID (format: 0.0.xxxxx)
  * @param amount - Amount in HBAR (not tinybars)
@@ -117,6 +103,7 @@ export interface TransactionHistoryItem {
  * @returns Transaction result with success status and details
  */
 export async function sendHBAR(
+  provider: IWalletProvider,
   senderAccountId: string,
   recipientId: string,
   amount: number,
@@ -124,9 +111,6 @@ export async function sendHBAR(
   userId?: string
 ): Promise<TransactionResult> {
   try {
-    // Get Metamask provider directly
-    const provider = getMetamaskProvider();
-
     // Validate recipient account ID format
     if (!isValidAccountId(recipientId)) {
       return {
@@ -143,7 +127,7 @@ export async function sendHBAR(
       };
     }
 
-    console.log('🚀 Sending HBAR transaction via Metamask...');
+    console.log(`🚀 Sending HBAR transaction via ${provider.name}...`);
     console.log('Transaction details:', {
       from: senderAccountId,
       to: recipientId,
@@ -319,8 +303,8 @@ export async function sendHBAR(
       }
     }
 
-    // Send transaction via Metamask
-    console.log('⏳ Requesting Metamask signature...');
+    // Send transaction via provider
+    console.log(`⏳ Requesting ${provider.name} signature...`);
     const txHash = await provider.request({
       method: 'eth_sendTransaction',
       params: [txParams],

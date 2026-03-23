@@ -21,6 +21,9 @@ import {
 import { Button } from '../../ui/button';
 import { ArrowDownUp, Settings, AlertCircle, CheckCircle, Loader2, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '../../../contexts/WalletContext';
+import { getBalance, submitTransaction } from '../../../lib/hederaUtils';
+import { env } from '../../../config';
 
 interface DEXSwapperProps {
   onSuccess?: () => void;
@@ -37,11 +40,13 @@ export function DEXSwapper({
   defaultToToken = 'USDC',
   defaultAmount = 10,
 }: DEXSwapperProps) {
+  const { connected, connect, account, activeProvider } = useWallet();
+  const [tokens, setTokens] = useState<Token[]>(MOCK_TOKENS);
   const [fromToken, setFromToken] = useState<Token>(
-    getTokenBySymbol(defaultFromToken) || MOCK_TOKENS[0]
+    tokens.find(t => t.symbol === defaultFromToken) || tokens[0]
   );
   const [toToken, setToToken] = useState<Token>(
-    getTokenBySymbol(defaultToToken) || MOCK_TOKENS[1]
+    tokens.find(t => t.symbol === defaultToToken) || tokens[1]
   );
   const [fromAmount, setFromAmount] = useState(defaultAmount);
   const [slippageTolerance, setSlippageTolerance] = useState(0.5);
@@ -49,6 +54,33 @@ export function DEXSwapper({
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapSuccess, setSwapSuccess] = useState(false);
   const [quote, setQuote] = useState<SwapQuote | null>(null);
+
+  // Sync balances with real testnet when connected
+  useEffect(() => {
+    if (connected && account) {
+      updateBalances();
+    }
+  }, [connected, account]);
+
+  const updateBalances = async () => {
+    if (!account) return;
+    try {
+      const hbarBalance = await getBalance(account, activeProvider || undefined);
+      setTokens(prev => prev.map(t =>
+        t.symbol === 'HBAR' ? { ...t, balance: hbarBalance } : t
+      ));
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
+
+  // Keep fromToken/toToken in sync with tokens array
+  useEffect(() => {
+    const updatedFrom = tokens.find(t => t.symbol === fromToken.symbol);
+    const updatedTo = tokens.find(t => t.symbol === toToken.symbol);
+    if (updatedFrom) setFromToken(updatedFrom);
+    if (updatedTo) setToToken(updatedTo);
+  }, [tokens]);
 
   // Update quote when inputs change
   useEffect(() => {
@@ -67,6 +99,11 @@ export function DEXSwapper({
   };
 
   const handleSwap = async () => {
+    if (!connected) {
+      await connect();
+      return;
+    }
+
     if (!quote) {
       toast.error('Invalid swap configuration');
       onError?.('No quote available');
@@ -81,24 +118,67 @@ export function DEXSwapper({
 
     setIsSwapping(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // If swapping HBAR, perform a real transaction to treasury
+      if (fromToken.symbol === 'HBAR') {
+        const treasury = env.HEDERA_OPERATOR_EVM;
+        const result = await submitTransaction(
+          account!,
+          treasury,
+          fromAmount,
+          activeProvider || undefined
+        );
 
-    const result = executeSwap(quote);
+        if (result.status !== 'success') {
+          toast.error('Transaction Failed');
+          setIsSwapping(false);
+          return;
+        }
 
-    setIsSwapping(false);
+        toast.success('🎉 Testnet Transaction Confirmed!', {
+          description: `HBAR transferred. Tx: ${result.transactionId.substring(0, 10)}...`,
+        });
+      } else {
+        // Mock delay for other tokens
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
 
-    if (result.success) {
-      setSwapSuccess(true);
-      toast.success('🎉 Swap Successful!', {
-        description: `Swapped ${formatTokenAmount(result.fromAmount)} ${fromToken.symbol} for ${formatTokenAmount(result.toAmount)} ${toToken.symbol}`,
-      });
-      onSuccess?.();
-    } else {
-      toast.error('Swap Failed', {
-        description: result.message,
-      });
-      onError?.(result.message);
+      const result = executeSwap(quote);
+
+      if (result.success) {
+        // Update local mock balances for non-HBAR tokens
+        if (fromToken.symbol !== 'HBAR' || toToken.symbol !== 'HBAR') {
+          setTokens(prev => prev.map(t => {
+            if (t.symbol === fromToken.symbol && t.symbol !== 'HBAR') {
+              return { ...t, balance: t.balance - fromAmount };
+            }
+            if (t.symbol === toToken.symbol && t.symbol !== 'HBAR') {
+              return { ...t, balance: t.balance + result.toAmount };
+            }
+            return t;
+          }));
+        }
+
+        if (fromToken.symbol === 'HBAR' || toToken.symbol === 'HBAR') {
+          await updateBalances();
+        }
+
+        setSwapSuccess(true);
+        toast.success('🎉 Swap Successful!', {
+          description: `Swapped ${formatTokenAmount(result.fromAmount)} ${fromToken.symbol} for ${formatTokenAmount(result.toAmount)} ${toToken.symbol}`,
+        });
+        onSuccess?.();
+      } else {
+        toast.error('Swap Failed', {
+          description: result.message,
+        });
+        onError?.(result.message);
+      }
+    } catch (error: any) {
+      console.error('Swap error:', error);
+      toast.error(error.message || 'Swap failed');
+    } finally {
+      setIsSwapping(false);
     }
   };
 
@@ -180,11 +260,10 @@ export function DEXSwapper({
               <button
                 key={value}
                 onClick={() => setSlippageTolerance(value)}
-                className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-colors ${
-                  slippageTolerance === value
+                className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-colors ${slippageTolerance === value
                     ? 'bg-[#0084C7] text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 {value}%
               </button>
@@ -216,12 +295,12 @@ export function DEXSwapper({
           <select
             value={fromToken.symbol}
             onChange={(e) => {
-              const token = getTokenBySymbol(e.target.value);
+              const token = tokens.find(t => t.symbol === e.target.value);
               if (token) setFromToken(token);
             }}
             className="flex-shrink-0 px-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-[#0084C7] focus:outline-none font-semibold appearance-none cursor-pointer"
           >
-            {MOCK_TOKENS.filter(t => t.symbol !== toToken.symbol).map(token => (
+            {tokens.filter(t => t.symbol !== toToken.symbol).map(token => (
               <option key={token.symbol} value={token.symbol}>
                 {token.icon} {token.symbol}
               </option>
@@ -270,12 +349,12 @@ export function DEXSwapper({
           <select
             value={toToken.symbol}
             onChange={(e) => {
-              const token = getTokenBySymbol(e.target.value);
+              const token = tokens.find(t => t.symbol === e.target.value);
               if (token) setToToken(token);
             }}
             className="flex-shrink-0 px-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-[#0084C7] focus:outline-none font-semibold appearance-none cursor-pointer"
           >
-            {MOCK_TOKENS.filter(t => t.symbol !== fromToken.symbol).map(token => (
+            {tokens.filter(t => t.symbol !== fromToken.symbol).map(token => (
               <option key={token.symbol} value={token.symbol}>
                 {token.icon} {token.symbol}
               </option>

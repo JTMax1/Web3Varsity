@@ -53,7 +53,7 @@ export function TransactionSender({
   onError,
   showAdvancedOptions = true,
 }: TransactionSenderProps) {
-  const { user, account, accountId, balance } = useWallet();
+  const { user, account, accountId, balance, activeProvider } = useWallet();
   const [recipient, setRecipient] = useState(defaultRecipient);
   const [amount, setAmount] = useState(defaultAmount);
   const [memo, setMemo] = useState(defaultMemo);
@@ -117,7 +117,7 @@ export function TransactionSender({
   };
 
   const handleConfirm = async () => {
-    if (!accountId || !user?.id) {
+    if (!accountId || !user?.id || !activeProvider) {
       toast.error('Please connect your wallet first');
       return;
     }
@@ -127,6 +127,7 @@ export function TransactionSender({
 
     try {
       const result = await sendHBAR(
+        activeProvider,
         accountId,
         recipient,
         amount,
@@ -315,11 +316,10 @@ export function TransactionSender({
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             placeholder="0.0.xxxxx"
-            className={`w-full px-4 py-3 rounded-xl border-2 transition-colors font-mono text-sm ${
-              recipient && !isRecipientValid
-                ? 'border-red-300 focus:border-red-500'
-                : 'border-gray-200 focus:border-[#0084C7]'
-            } focus:outline-none`}
+            className={`w-full px-4 py-3 rounded-xl border-2 transition-colors font-mono text-sm ${recipient && !isRecipientValid
+              ? 'border-red-300 focus:border-red-500'
+              : 'border-gray-200 focus:border-[#0084C7]'
+              } focus:outline-none`}
           />
           {recipient && !isRecipientValid && (
             <p className="text-red-500 text-sm mt-2 flex items-center">
@@ -343,11 +343,10 @@ export function TransactionSender({
               step="0.01"
               min="0"
               max={balance}
-              className={`w-full px-4 py-3 rounded-xl border-2 transition-colors ${
-                amount > 0 && !isAmountValid
-                  ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-[#0084C7]'
-              } focus:outline-none`}
+              className={`w-full px-4 py-3 rounded-xl border-2 transition-colors ${amount > 0 && !isAmountValid
+                ? 'border-red-300 focus:border-red-500'
+                : 'border-gray-200 focus:border-[#0084C7]'
+                } focus:outline-none`}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
               ℏ

@@ -18,7 +18,7 @@ import { CourseCompleteModal } from '../CourseCompleteModal';
 export function Profile() {
   const { username: urlUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user, refreshUser, account } = useWallet();
+  const { user, refreshUser, account, activeProvider } = useWallet();
 
   // Use URL username if provided, otherwise use current user
   const isOwnProfile = !urlUsername || urlUsername === user?.username;
@@ -71,11 +71,11 @@ export function Profile() {
     if (!user || (!user.hedera_account_id && !user.wallet_address) || !badge.user_achievement_id) return;
     setClaimingIds((prev: Record<string, boolean>) => ({ ...prev, [badge.id]: true }));
     try {
-      // Only prompt Ethers token association if connected via EVM (MetaMask)
-      if (account && window.ethereum) {
+      // Only prompt Ethers token association if connected via EVM
+      if (account && activeProvider) {
         toast.message('Please approve token association in your wallet...', { id: 'assoc' });
         try {
-          const provider = new BrowserProvider(window.ethereum as any);
+          const provider = new BrowserProvider(activeProvider as any);
           const signer = await provider.getSigner();
           const tokenIdStr = badge.nft_token_id || import.meta.env.VITE_BADGE_COLLECTION_TOKEN_ID || "0.0.8311700";
           const tokenHex = BigInt(tokenIdStr.split('.')[2]).toString(16).padStart(40, '0');

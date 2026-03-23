@@ -29,7 +29,10 @@ interface Message {
   transactionId?: string;
 }
 
+import { useWallet } from '../../../contexts/WalletContext';
+
 export const HCSMessageBoard: React.FC<HCSMessageBoardProps> = ({ onInteract }) => {
+  const { activeProvider } = useWallet();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [username, setUsername] = useState('');
@@ -92,8 +95,13 @@ export const HCSMessageBoard: React.FC<HCSMessageBoardProps> = ({ onInteract }) 
     setIsSubmitting(true);
 
     try {
+      if (!activeProvider) {
+        toast.error('Please connect your wallet first');
+        return;
+      }
+
       // Call client-side HCS submission (prompts wallet signature)
-      const result = await submitTopicMessageClientSide({
+      const result = await submitTopicMessageClientSide(activeProvider, {
         topicId: MESSAGE_BOARD_TOPIC_ID,
         message: newMessage,
         username: username,
@@ -122,8 +130,8 @@ export const HCSMessageBoard: React.FC<HCSMessageBoardProps> = ({ onInteract }) 
       // Convert sequenceNumber from Long object to number if needed
       const sequenceNum = result.sequenceNumber
         ? (typeof result.sequenceNumber === 'object'
-            ? Number(result.sequenceNumber)
-            : result.sequenceNumber)
+          ? Number(result.sequenceNumber)
+          : result.sequenceNumber)
         : messages.length + 1;
 
       const message: Message = {

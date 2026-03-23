@@ -39,6 +39,9 @@ import { WalletCreator } from '../practical/WalletCreator';
 import { WalletInvestigation } from '../practical/WalletInvestigation';
 import { ExplorerNavigation } from '../practical/ExplorerNavigation';
 import { TransactionDetective } from '../practical/TransactionDetective';
+import { BonzoDeFiSimulator } from '../practical/BonzoDeFiSimulator';
+import { BonzoRAGHarvester } from '../practical/BonzoRAGHarvester';
+import { BonzoIntentAgent } from '../practical/BonzoIntentAgent';
 import { toast } from 'sonner';
 
 interface PracticalLessonProps {
@@ -51,16 +54,19 @@ interface PracticalLessonProps {
     successMessage: string;
     tips: string[];
     interactiveType?:
-      | 'transaction'
-      | 'dex_swap'
-      | 'hcs_message'
-      | 'nft_minting'
-      | 'wallet_creation'
-      | 'wallet_investigation'
-      | 'explorer_navigation'
-      | 'transaction_detective'
-      | 'defi' // Legacy - maps to DeFiSimulator
-      | 'contract'; // Future use - Smart Contract Playground
+    | 'transaction'
+    | 'dex_swap'
+    | 'hcs_message'
+    | 'nft_minting'
+    | 'wallet_creation'
+    | 'wallet_investigation'
+    | 'explorer_navigation'
+    | 'transaction_detective'
+    | 'defi' // Legacy - maps to DeFiSimulator
+    | 'bonzo_defi' // New - Intelligent Keeper simulation
+    | 'bonzo_rag' // New - Sentiment Analysis simulation
+    | 'bonzo_intent' // New - Intent-Based UI simulation
+    | 'contract'; // Future use - Smart Contract Playground
     defaultRecipient?: string;
     defaultAmount?: number;
     defaultMemo?: string;
@@ -140,6 +146,21 @@ export function PracticalLesson({
             onSuccess={handleTransactionSuccess}
             onError={handleTransactionError}
           />
+        );
+
+      case 'bonzo_defi':
+        return (
+          <BonzoDeFiSimulator onInteract={() => handleTransactionSuccess()} />
+        );
+
+      case 'bonzo_rag':
+        return (
+          <BonzoRAGHarvester onInteract={() => handleTransactionSuccess()} />
+        );
+
+      case 'bonzo_intent':
+        return (
+          <BonzoIntentAgent onInteract={() => handleTransactionSuccess()} />
         );
 
       case 'dex_swap':
@@ -248,15 +269,14 @@ export function PracticalLesson({
           {(['intro', 'interactive'] as const).map((step, index) => (
             <React.Fragment key={step}>
               <div className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  currentStep === step
-                    ? 'bg-[#0084C7] text-white shadow-[0_4px_16px_rgba(0,132,199,0.4)]'
-                    : step === 'interactive' && currentStep === 'intro'
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentStep === step
+                  ? 'bg-[#0084C7] text-white shadow-[0_4px_16px_rgba(0,132,199,0.4)]'
+                  : step === 'interactive' && currentStep === 'intro'
                     ? 'bg-gray-200 text-gray-500'
                     : canComplete && step === 'interactive'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-500'
-                }`}>
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
                   {canComplete && step === 'interactive' ? (
                     <CheckCircle className="w-5 h-5" />
                   ) : (
@@ -268,11 +288,10 @@ export function PracticalLesson({
                 </span>
               </div>
               {index < 1 && (
-                <div className={`flex-1 h-1 mx-2 rounded transition-all ${
-                  currentStep === 'interactive'
-                    ? 'bg-[#0084C7]'
-                    : 'bg-gray-200'
-                }`} />
+                <div className={`flex-1 h-1 mx-2 rounded transition-all ${currentStep === 'interactive'
+                  ? 'bg-[#0084C7]'
+                  : 'bg-gray-200'
+                  }`} />
               )}
             </React.Fragment>
           ))}
@@ -416,8 +435,8 @@ export function PracticalLesson({
                   ${isCompleting
                     ? 'bg-gray-400 text-white cursor-wait'
                     : isCompleted
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-[0_4px_16px_rgba(34,197,94,0.3)]'
-                    : 'bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white hover:from-[#0074b7] hover:to-[#0098d8] shadow-[0_4px_16px_rgba(0,132,199,0.3)]'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-[0_4px_16px_rgba(34,197,94,0.3)]'
+                      : 'bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white hover:from-[#0074b7] hover:to-[#0098d8] shadow-[0_4px_16px_rgba(0,132,199,0.3)]'
                   }
                 `}
               >
@@ -425,8 +444,8 @@ export function PracticalLesson({
                 {isCompleting
                   ? 'Saving...'
                   : isCompleted
-                  ? 'Continue to Next Lesson →'
-                  : 'Save & Continue (+50 XP)'}
+                    ? 'Continue to Next Lesson →'
+                    : 'Save & Continue (+50 XP)'}
               </Button>
             )}
           </>

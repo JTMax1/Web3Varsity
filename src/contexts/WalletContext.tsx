@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/lib/supabase/types';
 import type { Session } from '@supabase/supabase-js';
+import { IWalletProvider, createInjectedProvider, createWalletConnectProvider } from '@/lib/wallet/provider-utils';
 
 interface WalletState {
   connected: boolean;
@@ -28,6 +29,7 @@ interface WalletState {
   session: Session | null;  // Supabase session
   authLoading: boolean;  // Authentication loading state
   authError: string | null;  // Authentication error
+  activeProvider: IWalletProvider | null;  // Unified provider interface
 }
 
 interface WalletContextType extends WalletState {
@@ -52,6 +54,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     session: null,
     authLoading: false,
     authError: null,
+    activeProvider: null,
   });
 
   useEffect(() => {
@@ -67,41 +70,52 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, loading: true, error: null, authLoading: true, authError: null }));
 
     try {
-      let walletAddress: string;
+      let walletAddress: string | null = null; // This will be the EVM address for 'account' state
       let hederaId: string | null = null;
       let signature: string;
       let message: string;
       let networkValue: string;
+      let activeProvider: IWalletProvider | null = null;
 
       if (type === 'native') {
         const { connectHederaNative, signMessageNative } = await import('@/lib/hederaWalletConnect');
         const nativeResult = await connectHederaNative();
         console.log('✅ Native Wallet connected:', nativeResult.accountId);
 
-        walletAddress = nativeResult.evmAddress || nativeResult.accountId;
+        walletAddress = nativeResult.evmAddress || null; // Prioritize EVM address for 'account'
         hederaId = nativeResult.accountId;
         networkValue = nativeResult.network;
 
         if (nativeResult.isEIP6963) {
           // Treat it exactly as standard EVM Metamask!
           if (!nativeResult.provider) throw new Error('No EIP-6963 provider returned');
-          const provider = new BrowserProvider(nativeResult.provider);
+          if (!walletAddress) throw new Error('EVM address not available for EIP-6963 provider');
+          const ethersProvider = new BrowserProvider(nativeResult.provider);
 
           console.log('🖊️ Requesting EIP-6963 Native wallet signature...');
           const { signature: sig, message: msg } = await requestWalletSignature(
             walletAddress,
-            provider
+            ethersProvider
           );
           signature = sig;
           message = msg;
           console.log('✅ Signature obtained via EIP-6963 Provider');
+
+          // Set active provider
+          activeProvider = createInjectedProvider(nativeResult.provider, nativeResult.info?.name || 'Native Extension');
         } else {
+          if (!hederaId) throw new Error('Hedera account ID not available for native WalletConnect');
+          // For native WalletConnect, we sign with the Hedera ID, but the 'account' state will be null if no EVM address
           const { generateAuthMessage } = await import('@/lib/auth/wallet-signature');
-          message = generateAuthMessage(walletAddress);
+          message = generateAuthMessage(hederaId); // Use Hedera ID for message generation if no EVM address
 
           console.log('🖊️ Requesting native WalletConnect signature...');
-          signature = await signMessageNative(walletAddress, message);
+          const { dAppConnector } = await import('@/lib/hederaWalletConnect');
+          signature = await signMessageNative(hederaId, message);
           console.log('✅ Native signature obtained via WalletConnect');
+
+          // Set active provider via WalletConnect wrapper
+          activeProvider = createWalletConnectProvider(dAppConnector);
         }
       } else {
         // 1. Connect Metamask wallet
@@ -113,27 +127,36 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         networkValue = walletResult.network;
 
         // 2. Create ethers provider for signing
-        if (!window.ethereum) {
+        if (!(window as any).ethereum) {
           throw new Error('No Ethereum provider found');
         }
 
-        const provider = new BrowserProvider(window.ethereum);
+        const ethersProvider = new BrowserProvider((window as any).ethereum);
 
         // 3. Request signature from user
         console.log('🖊️ Requesting wallet signature...');
         const { signature: sig, message: msg } = await requestWalletSignature(
           walletAddress,
-          provider
+          ethersProvider
         );
         signature = sig;
         message = msg;
         console.log('✅ Signature obtained');
+
+        // Set active provider (Metamask)
+        activeProvider = createInjectedProvider((window as any).ethereum, 'Metamask');
+      }
+
+      // Determine the identifier to use for authentication
+      const authIdentifier = walletAddress || hederaId;
+      if (!authIdentifier) {
+        throw new Error('No wallet address or Hedera ID available for authentication.');
       }
 
       // 4. Authenticate with backend (verify signature, create/update user, get JWT)
       console.log('🔐 Authenticating with backend...');
       const authResult = await authenticateWithSignature(
-        walletAddress,
+        authIdentifier, // Use EVM address if available, otherwise Hedera ID
         signature,
         message,
         hederaId || undefined
@@ -154,13 +177,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       // 6. Fetch balance
       let balance = 0;
       try {
-        if (type === 'evm') {
+        if (walletAddress) { // If EVM address is available, use it for balance
           balance = await getBalance(walletAddress);
-        } else {
+        } else if (hederaId) { // Otherwise, use Hedera ID
           const mirrorNodeUrl = networkValue === 'mainnet'
             ? 'https://mainnet-public.mirrornode.hedera.com'
             : 'https://testnet.mirrornode.hedera.com';
-          const response = await fetch(`${mirrorNodeUrl}/api/v1/balances?account.id=${walletAddress}`);
+          const response = await fetch(`${mirrorNodeUrl}/api/v1/balances?account.id=${hederaId}`);
           if (response.ok) {
             const data = await response.json();
             if (data.balances && data.balances.length > 0) {
@@ -175,7 +198,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       // 7. Update state with all data
       setState({
         connected: true,
-        account: type === 'evm' ? walletAddress : null,
+        account: walletAddress, // EVM address or null
         accountId: hederaId,
         balance,
         network: networkValue,
@@ -185,6 +208,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         session: sessionData.session,
         authLoading: false,
         authError: null,
+        activeProvider,
       });
 
       console.log('✅ Wallet connection complete');
@@ -243,10 +267,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     if (!state.account && !state.accountId) return;
 
     try {
-      if (state.account) {
+      if (state.account) { // Prioritize EVM address for balance
         const balance = await getBalance(state.account);
         setState(prev => ({ ...prev, balance }));
-      } else if (state.accountId) {
+      } else if (state.accountId) { // Fallback to Hedera ID
         const mirrorNodeUrl = state.network === 'mainnet'
           ? 'https://mainnet-public.mirrornode.hedera.com'
           : 'https://testnet.mirrornode.hedera.com';
@@ -327,31 +351,34 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         console.log('✅ Found existing session, restoring wallet state...');
 
         // Extract wallet info from session metadata
-        const walletAddress = session.user.user_metadata?.wallet_address;
+        const walletAddress = session.user.user_metadata?.wallet_address; // This is the EVM address
         const hederaAccountId = session.user.user_metadata?.hedera_account_id;
         const userId = session.user.user_metadata?.user_id;
 
-        if (!walletAddress || !userId) {
+        if (!walletAddress && !hederaAccountId || !userId) { // Ensure at least one identifier and user ID
           console.warn('⚠️ Invalid session metadata, signing out');
           await supabase.auth.signOut();
           return;
         }
 
-        // Check if wallet is still connected
-        if (window.ethereum) {
+        // Check if wallet is still connected (only for EVM providers like Metamask)
+        if (walletAddress && window.ethereum) {
           const accounts = await window.ethereum.request({
             method: 'eth_accounts',
           }) as string[];
 
           if (!accounts || accounts.length === 0 || accounts[0].toLowerCase() !== walletAddress.toLowerCase()) {
-            console.warn('⚠️ Wallet not connected, signing out');
+            console.warn('⚠️ Wallet not connected or account changed, signing out');
             await supabase.auth.signOut();
             return;
           }
-        } else {
-          console.warn('⚠️ No Ethereum provider found');
-          return;
+        } else if (walletAddress && !window.ethereum) {
+          console.warn('⚠️ No Ethereum provider found for previously connected EVM wallet. Cannot verify connection.');
+          // We might choose to sign out here or proceed assuming the session is valid.
+          // For now, let's proceed, but this could be a point of failure if the user expects an EVM wallet.
         }
+        // Note: For native Hedera wallets, there's no universal way to check connection status without re-initiating.
+        // We rely on the Supabase session being valid.
 
         // Fetch user data
         const { data: user, error: userError } = await supabase
@@ -367,21 +394,39 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Fetch balance
-        const balance = await getBalance(walletAddress);
+        let balance = 0;
+        try {
+          if (walletAddress) {
+            balance = await getBalance(walletAddress);
+          } else if (hederaAccountId) {
+            const mirrorNodeUrl = 'https://testnet.mirrornode.hedera.com'; // Default to testnet for restoration balance check
+            const response = await fetch(`${mirrorNodeUrl}/api/v1/balances?account.id=${hederaAccountId}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.balances && data.balances.length > 0) {
+                balance = data.balances[0].balance / 1e8; // Tinybars to Hbar
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch balance during session restore', err);
+        }
+
 
         // Restore state
         setState({
           connected: true,
-          account: walletAddress,
+          account: walletAddress || null, // EVM address or null
           accountId: hederaAccountId || null,
           balance,
-          network: 'testnet',
+          network: 'testnet', // Assuming testnet for now, could be stored in session metadata
           loading: false,
           error: null,
           user,
           session,
           authLoading: false,
           authError: null,
+          activeProvider: null, // Cannot restore activeProvider easily without re-connecting
         });
 
         console.log('✅ Session restored successfully');

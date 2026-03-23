@@ -21,6 +21,9 @@ import {
 import { Button } from '../../ui/button';
 import { TrendingUp, TrendingDown, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '../../../contexts/WalletContext';
+import { getBalance, submitTransaction } from '../../../lib/hederaUtils';
+import { env } from '../../../config';
 
 interface DeFiSimulatorProps {
   onSuccess?: () => void;
@@ -35,14 +38,33 @@ export function DeFiSimulator({
   targetPoolId,
   targetAmount = 1,
 }: DeFiSimulatorProps) {
+  const { connected, connect, account, activeProvider } = useWallet();
   const [selectedPool, setSelectedPool] = useState<LiquidityPool | null>(
     targetPoolId ? getPoolById(targetPoolId) || null : null
   );
   const [depositAmount, setDepositAmount] = useState(targetAmount);
   const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
+  const [userBalance, setUserBalance] = useState<number | null>(null);
   const [isDepositing, setIsDepositing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [liveRewards, setLiveRewards] = useState(0);
+
+  // Fetch real balance
+  useEffect(() => {
+    if (connected && account) {
+      fetchBalance();
+    }
+  }, [connected, account]);
+
+  const fetchBalance = async () => {
+    if (!account) return;
+    try {
+      const balance = await getBalance(account, activeProvider || undefined);
+      setUserBalance(balance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
 
   // Update live rewards every second when user has a position
   useEffect(() => {
@@ -67,27 +89,53 @@ export function DeFiSimulator({
   };
 
   const handleDeposit = async () => {
+    if (!connected) {
+      await connect();
+      return;
+    }
+
     if (!selectedPool || depositAmount <= 0) {
       toast.error('Please enter a valid deposit amount');
       onError?.('Invalid deposit amount');
       return;
     }
 
+    if (userBalance !== null && userBalance < depositAmount) {
+      toast.error('Insufficient HBAR balance');
+      return;
+    }
+
     setIsDepositing(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const treasury = env.HEDERA_OPERATOR_EVM;
+      const result = await submitTransaction(
+        account!,
+        treasury,
+        depositAmount,
+        activeProvider || undefined
+      );
 
-    const position = simulateDeposit(selectedPool.id, depositAmount);
-    setUserPosition(position);
-    setIsDepositing(false);
-    setShowSuccess(true);
+      if (result.status === 'success') {
+        const position = simulateDeposit(selectedPool.id, depositAmount);
+        setUserPosition(position);
+        setShowSuccess(true);
+        await fetchBalance();
 
-    toast.success('🎉 Successfully deposited into pool!', {
-      description: `${depositAmount} HBAR deposited into ${selectedPool.name}`,
-    });
+        toast.success('🎉 Successfully deposited into pool!', {
+          description: `${depositAmount} HBAR deposited. Tx: ${result.transactionId.substring(0, 10)}...`,
+        });
 
-    onSuccess?.();
+        onSuccess?.();
+      } else {
+        toast.error('Transaction Failed');
+      }
+    } catch (error: any) {
+      console.error('Deposit error:', error);
+      toast.error(error.message || 'Deposit failed');
+    } finally {
+      setIsDepositing(false);
+    }
   };
 
   const handleWithdraw = () => {
@@ -212,9 +260,14 @@ export function DeFiSimulator({
           <h3 className="text-xl font-bold text-gray-900 mb-6">Deposit into Pool</h3>
 
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Deposit Amount (HBAR)
-            </label>
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-semibold text-gray-700">
+                Deposit Amount (HBAR)
+              </label>
+              <span className="text-sm text-gray-500">
+                Balance: {userBalance !== null ? `${userBalance.toFixed(4)} ℏ` : '...'}
+              </span>
+            </div>
             <input
               type="number"
               value={depositAmount}

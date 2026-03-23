@@ -140,7 +140,48 @@ export async function getAllCourses(options: CourseQueryOptions = {}): Promise<C
       );
     }
 
-    return data || [];
+    // Inject Hackathon Special Course for local/demo purposes
+    const hackathonCourse: Course = {
+      id: 'course_050',
+      title: 'Mastering Bonzo Finance: Intelligent Keeper Agents',
+      description: 'Learn how to build and deploy autonomous "Keeper Agents" using the Hedera Agent Kit to optimize yield and protect capital on Bonzo Finance.',
+      difficulty: 'advanced',
+      track: 'developer',
+      category: 'DeFi',
+      estimated_hours: 4,
+      total_lessons: 2,
+      enrollment_count: 1250,
+      completion_count: 450,
+      average_rating: 5.0,
+      total_ratings: 85,
+      thumbnail_emoji: '🤖',
+      learning_objectives: [
+        'Understand the architecture of Intelligent Keeper Agents',
+        'Learn how to use the Hedera Agent Kit with Bonzo Finance',
+        'Automate DeFi rebalancing to protect capital',
+        'Build and deploy a functional Keeper console'
+      ],
+      what_you_will_learn: [
+        'Hedera Agent Kit Fundamentals',
+        'Bonzo Finance LP integration',
+        'Real-time Market Risk Analysis',
+        'Autonomous Agent Decision Logic'
+      ],
+      completion_xp: 500,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: new Date().toISOString(),
+      published_at: '2025-01-01T00:00:00.000Z',
+      is_published: true,
+      is_featured: true,
+      is_coming_soon: false
+    };
+
+    const combinedData = [...(data || [])];
+    if (!search || hackathonCourse.title.toLowerCase().includes(search.toLowerCase())) {
+      combinedData.unshift(hackathonCourse);
+    }
+
+    return combinedData;
   } catch (error) {
     if (error instanceof CourseAPIError) {
       throw error;
@@ -169,6 +210,44 @@ export async function getAllCourses(options: CourseQueryOptions = {}): Promise<C
  */
 export async function getCourseById(courseId: string): Promise<Course | null> {
   try {
+    // Check for Hackathon Special Course
+    if (courseId === 'course_050') {
+      return {
+        id: 'course_050',
+        title: 'Mastering Bonzo Finance: Intelligent Keeper Agents',
+        description: 'Learn how to build and deploy autonomous "Keeper Agents" using the Hedera Agent Kit to optimize yield and protect capital on Bonzo Finance.',
+        difficulty: 'advanced',
+        track: 'developer',
+        category: 'DeFi',
+        estimated_hours: 4,
+        total_lessons: 2,
+        enrollment_count: 1250,
+        completion_count: 450,
+        average_rating: 5.0,
+        total_ratings: 85,
+        thumbnail_emoji: '🤖',
+        learning_objectives: [
+          'Understand the architecture of Intelligent Keeper Agents',
+          'Learn how to use the Hedera Agent Kit with Bonzo Finance',
+          'Automate DeFi rebalancing to protect capital',
+          'Build and deploy a functional Keeper console'
+        ],
+        what_you_will_learn: [
+          'Hedera Agent Kit Fundamentals',
+          'Bonzo Finance LP integration',
+          'Real-time Market Risk Analysis',
+          'Autonomous Agent Decision Logic'
+        ],
+        completion_xp: 500,
+        created_at: '2025-01-01T00:00:00.000Z',
+        updated_at: new Date().toISOString(),
+        published_at: '2025-01-01T00:00:00.000Z',
+        is_published: true,
+        is_featured: true,
+        is_coming_soon: false
+      };
+    }
+
     const { data, error } = await supabase
       .from('courses')
       .select('*')
@@ -213,6 +292,78 @@ export async function getCourseById(courseId: string): Promise<Course | null> {
  * ```
  */
 export async function getCourseLessons(courseId: string): Promise<Lesson[]> {
+  // Inject Hackathon Lessons for local/demo purposes
+  if (courseId === 'course_050') {
+    return [
+      {
+        id: 'bonzo_lesson_1',
+        course_id: 'course_050',
+        title: 'The Intelligent Keeper: A Web3 Herd Protector',
+        lesson_type: 'text',
+        content: {
+          sections: [
+            {
+              heading: 'What is a Bonzo Keeper?',
+              emoji: '🛡️',
+              text: 'In the world of DeFi, market conditions change as fast as weather on the savanna. A Bonzo Keeper is an autonomous agent that monitors your "herd" (assets) and moves them to safety or better grazing grounds (higher yield) without you needing to be awake. It uses the Hedera Agent Kit to watch the network in real-time.',
+              list: [
+                'Autonomous Monitoring',
+                'Real-time Risk Management',
+                'Yield Optimization'
+              ]
+            },
+            {
+              heading: 'Why This Matters for Africa',
+              emoji: '🌍',
+              text: 'Just as a community shepherd protects the village cattle from predators, a DeFi Keeper protects the digital wealth of a community. By automating these financial decisions, we remove the need for high-speed internet or constant 24/7 monitoring, making advanced DeFi accessible even in regions with limited connectivity.',
+              list: [
+                'Financial Inclusion',
+                'Resilient Wealth Protection',
+                'Automated Community Trusts'
+              ]
+            }
+          ]
+        },
+        sequence_number: 1,
+        duration_minutes: 10,
+        completion_xp: 150,
+        perfect_score_xp: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'bonzo_lesson_2',
+        course_id: 'course_050',
+        title: 'BUILD: Your Autonomous Yield Sentry',
+        lesson_type: 'practical',
+        content: {
+          title: 'Deploying the Bonzo Intelligent Keeper',
+          description: 'Ready to put theory into practice? In this mission, you will deploy a virtual Keeper Agent that monitors HBAR price volatility and rebalances your vault automatically.',
+          objective: 'Configure and launch an autonomous agent that rebalances DeFi positions during market volatility.',
+          interactiveType: 'bonzo_defi',
+          steps: [
+            'Initialize your Bonzo Vault with a test deposit of 500 HBAR.',
+            'Connect the Intelligent Keeper Agent to your vault monitor.',
+            'Monitor the Volatility Gauge and wait for a significant market fluctuation.',
+            'Verify the autonomous rebalance action in the Agent Log console.'
+          ],
+          tips: [
+            'Watch the "Sentiment" indicator; Bearish trends trigger safety moves.',
+            'The Agent Log shows the exact logic used for each rebalance.',
+            'Check how the APY changes after the agent moves your funds.'
+          ],
+          successMessage: 'Mission Accomplished! Your Keeper Agent successfully protected your capital and optimized your yield. You are now a Bonzo Master!'
+        },
+        sequence_number: 2,
+        duration_minutes: 20,
+        completion_xp: 350,
+        perfect_score_xp: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+  }
+
   try {
     const { data, error } = await supabase
       .from('lessons')

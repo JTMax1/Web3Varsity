@@ -188,6 +188,45 @@ export const PRACTICAL_TYPES: PracticalType[] = [
       'Analytical thinking'
     ],
     tags: ['detective', 'analysis', 'forensics', 'advanced']
+  },
+  {
+    id: 'bonzo_defi',
+    name: 'Bonzo Finance Simulator',
+    description: 'Interact with Bonzo Finance vaults on Hedera testnet. Supply assets, earn yield, and manage your DeFi position.',
+    emoji: '🦒',
+    requiresTestnet: true,
+    difficulty: 'intermediate',
+    estimatedMinutes: 10,
+    component: 'BonzoDeFiSimulator',
+    warning: 'Real testnet transaction required. Please ensure you have testnet HBAR.',
+    prerequisites: ['Connected wallet', 'Testnet HBAR'],
+    tags: ['bonzo', 'defi', 'yield', 'lending']
+  },
+  {
+    id: 'bonzo_rag',
+    name: 'Bonzo RAG Harvester',
+    description: 'Build an AI Keeper that uses RAG (Retrieval-Augmented Generation) to analyze market sentiment and proactively harvest rewards.',
+    emoji: '📰',
+    requiresTestnet: true,
+    difficulty: 'advanced',
+    estimatedMinutes: 15,
+    component: 'BonzoRAGHarvester',
+    warning: 'Involves real testnet swaps via Hedera Agent Kit. Sentiment data is live.',
+    prerequisites: ['Connected wallet', 'Understanding of RAG', 'Bonzo position'],
+    tags: ['ai', 'rag', 'keeper', 'automation']
+  },
+  {
+    id: 'bonzo_intent',
+    name: 'Bonzo Intent Agent',
+    description: 'Create an intent-based agent using the Hedera Agent Kit. Tell your agent your goals, and let it execute complex DeFi strategies on your behalf.',
+    emoji: '🤖',
+    requiresTestnet: true,
+    difficulty: 'advanced',
+    estimatedMinutes: 12,
+    component: 'BonzoIntentAgent',
+    warning: 'Real intent execution on testnet. Agent will sign transactions based on your verbal goals.',
+    prerequisites: ['Connected wallet', 'DeFi goals', 'Hedera Agent Kit basics'],
+    tags: ['intent', 'ai', 'agent-kit', 'bonzo']
   }
 ];
 

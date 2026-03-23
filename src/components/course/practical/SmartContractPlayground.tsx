@@ -173,7 +173,10 @@ contract SimpleVoting {
   }
 ];
 
+import { useWallet } from '../../../contexts/WalletContext';
+
 export const SmartContractPlayground: React.FC<SmartContractPlaygroundProps> = ({ onInteract }) => {
+  const { activeProvider } = useWallet();
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
@@ -198,11 +201,16 @@ export const SmartContractPlayground: React.FC<SmartContractPlaygroundProps> = (
   const handleDeploy = async () => {
     if (!selectedContract) return;
 
+    if (!activeProvider) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
     setIsDeploying(true);
 
     try {
       // Call client-side contract deployment (prompts wallet signature)
-      const result = await deployContractClientSide({
+      const result = await deployContractClientSide(activeProvider, {
         contractName: selectedContract.name,
         solidityCode: selectedContract.code,
         constructorParams: [],
@@ -254,18 +262,21 @@ export const SmartContractPlayground: React.FC<SmartContractPlaygroundProps> = (
 
       const apiResult = isReadonly
         ? await queryContractClientSide({
-            contractId: deployedAddress,
-            functionName: func.name,
-            functionParams,
-            outputType: func.outputs, // Pass output type for proper decoding
-            gas: 300000,
-          })
-        : await executeContractClientSide({
+          contractId: deployedAddress,
+          functionName: func.name,
+          functionParams,
+          outputType: func.outputs, // Pass output type for proper decoding
+          gas: 300000,
+        })
+        : await (async () => {
+          if (!activeProvider) throw new Error('Wallet provider not found');
+          return await executeContractClientSide(activeProvider, {
             contractId: deployedAddress,
             functionName: func.name,
             functionParams,
             gas: 300000,
           });
+        })();
 
       if (!apiResult.success) {
         throw new Error(apiResult.error || 'Execution failed');

@@ -12,6 +12,7 @@ import {
   ContractCallQuery,
   ContractFunctionParameters,
 } from '@hashgraph/sdk';
+import type { IWalletProvider } from '../wallet/provider-utils';
 
 // Extend window type for Ethereum provider
 declare global {
@@ -60,24 +61,16 @@ export interface ExecuteContractResult {
  * The user's wallet signs a message to prove authorization, then the backend
  * compiles and deploys the actual smart contract.
  *
+ * @param provider - Unified wallet provider
  * @param params - Contract deployment parameters
  * @returns Deploy result with REAL contract ID verifiable on HashScan
  */
 export async function deployContractClientSide(
+  provider: IWalletProvider,
   params: DeployContractParams
 ): Promise<DeployContractResult> {
   try {
-    console.log('🚀 Deploying REAL smart contract to Hedera testnet...');
-
-    // Get Metamask provider for wallet verification
-    if (typeof window === 'undefined' || !window.ethereum) {
-      return {
-        success: false,
-        error: 'Wallet not found. Please install Metamask or HashPack.',
-      };
-    }
-
-    const provider = window.ethereum;
+    console.log(`🚀 Deploying REAL smart contract to Hedera testnet via ${provider.name}...`);
 
     // Request wallet connection
     let accounts: string[];
@@ -235,24 +228,16 @@ export async function deployContractClientSide(
  * This function executes REAL contract functions on Hedera testnet using the backend
  * Edge Function that has proper Hedera operator credentials.
  *
+ * @param provider - Unified wallet provider
  * @param params - Contract execution parameters
  * @returns Execution result with REAL transaction details
  */
 export async function executeContractClientSide(
+  provider: IWalletProvider,
   params: ExecuteContractParams
 ): Promise<ExecuteContractResult> {
   try {
-    console.log('⚡ Executing REAL contract function on Hedera testnet...');
-
-    // Get Metamask provider for wallet verification
-    if (typeof window === 'undefined' || !window.ethereum) {
-      return {
-        success: false,
-        error: 'Wallet not found. Please install Metamask or HashPack.',
-      };
-    }
-
-    const provider = window.ethereum;
+    console.log(`⚡ Executing REAL contract function on Hedera testnet via ${provider.name}...`);
 
     // Request wallet connection
     let accounts: string[];

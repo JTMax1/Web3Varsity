@@ -28,7 +28,7 @@ export function CourseCompleteModal({
   courseId,
   onClaimCertificate,
 }: CourseCompleteModalProps) {
-  const { user, session, connected, connect, account } = useWallet();
+  const { user, session, connected, connect, account, activeProvider } = useWallet();
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Certificate claiming state
@@ -64,7 +64,7 @@ export function CourseCompleteModal({
       // Check token association if wallet is connected
       if (connected && account && collectionTokenId) {
         setCheckingAssociation(true);
-        isTokenAssociated(collectionTokenId, account)
+        isTokenAssociated(collectionTokenId, account, activeProvider || undefined)
           .then((associated) => {
             setTokenAssociated(associated);
             console.log(`Token ${collectionTokenId} associated:`, associated);
@@ -154,7 +154,7 @@ export function CourseCompleteModal({
         console.log('⚠️ Token not associated, associating now...');
 
         try {
-          const result = await associateToken(collectionTokenId);
+          const result = await associateToken(collectionTokenId, activeProvider || undefined);
 
           if (result.status === 'success') {
             setTokenAssociated(true);

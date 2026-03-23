@@ -676,6 +676,20 @@ export const mockCourses: Course[] = [
     thumbnail: '💸',
     lessons: 5,
     prerequisites: ['course_025']
+  },
+  {
+    id: 'course_050',
+    title: 'Mastering Bonzo Finance: Intelligent Keeper Agents',
+    description: 'Learn how to build and deploy autonomous "Keeper Agents" using the Hedera Agent Kit to optimize yield and protect capital on Bonzo Finance.',
+    difficulty: 'advanced',
+    track: 'developer',
+    category: 'DeFi',
+    estimatedHours: 4,
+    enrollmentCount: 105,
+    rating: 5.0,
+    thumbnail: '🤖',
+    lessons: 2,
+    prerequisites: ['course_008']
   }
 ];
 

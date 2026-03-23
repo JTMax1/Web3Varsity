@@ -14,6 +14,7 @@ import {
   TokenSupplyType,
   PrivateKey,
 } from '@hashgraph/sdk';
+import type { IWalletProvider } from '../wallet/provider-utils';
 
 // Extend window type for Ethereum provider
 declare global {
@@ -131,26 +132,16 @@ export async function mintNFT(params: MintNFTParams): Promise<MintResult> {
  * The user's wallet signs a message to prove authorization, then the backend
  * creates/mints the actual NFT on HTS (Hedera Token Service).
  *
+ * @param provider - Unified wallet provider
  * @param params - NFT minting parameters
  * @returns Mint result with REAL token ID verifiable on HashScan
  */
-export async function mintNFTClientSide(params: MintNFTParams): Promise<MintResult> {
+export async function mintNFTClientSide(
+  provider: IWalletProvider,
+  params: MintNFTParams
+): Promise<MintResult> {
   try {
-    console.log('🎨 Minting REAL NFT on Hedera testnet...');
-
-    // Get Metamask provider for wallet verification
-    if (typeof window === 'undefined' || !window.ethereum) {
-      return {
-        success: false,
-        tokenId: '',
-        serialNumber: 0,
-        transactionId: '',
-        hashScanUrl: '',
-        error: 'Wallet not found. Please install Metamask or HashPack.',
-      };
-    }
-
-    const provider = window.ethereum;
+    console.log(`🎨 Minting REAL NFT on Hedera testnet via ${provider.name}...`);
 
     // Request wallet connection
     let accounts: string[];
@@ -241,9 +232,9 @@ export async function mintNFTClientSide(params: MintNFTParams): Promise<MintResu
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
+        } as any,
         body: JSON.stringify({
           name: params.name,
           description: params.description,
