@@ -176,7 +176,7 @@ export function BadgeEarnedModal({
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <motion.button
+                    {/* <motion.button
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.7 }}
@@ -192,7 +192,7 @@ export function BadgeEarnedModal({
                       className="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl text-md font-semibold shadow-lg hover:shadow-xl transition-all"
                     >
                       Claim NFT to Wallet
-                    </motion.button>
+                    </motion.button> */}
 
                     <motion.button
                       initial={{ opacity: 0 }}
