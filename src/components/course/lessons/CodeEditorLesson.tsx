@@ -33,7 +33,7 @@ export function CodeEditorLesson({
   const [currentHint, setCurrentHint] = useState(0);
   const [allTestsPassed, setAllTestsPassed] = useState(false);
 
-  const runCode = () => {
+const runCode = async () => {
     // Capture console.log output
     const logs: string[] = [];
     const originalLog = console.log;
@@ -49,9 +49,10 @@ export function CodeEditorLesson({
       setOutput('');
       setTestResults([]);
 
-      // Run the user's code
+      // Run the user's code inside an async IIFE and await it
+      // This prevents the evaluator from finishing before timeouts/promises resolve
       // eslint-disable-next-line no-eval
-      eval(code);
+      await eval(`(async () => { ${code} })()`);
 
       // Restore console.log
       console.log = originalLog;
@@ -64,7 +65,8 @@ export function CodeEditorLesson({
       if (content.tests && content.tests.length > 0) {
         const results = content.tests.map((test: Test) => {
           // Simple test: check if output contains expected string
-          const passed = outputText.includes(test.expected);
+          // Wrapping test.expected in String() just in case some old lessons still have booleans
+          const passed = outputText.includes(String(test.expected));
           return {
             name: test.name,
             passed,
