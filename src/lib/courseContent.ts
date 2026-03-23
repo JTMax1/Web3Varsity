@@ -729,133 +729,7 @@ export const understandingTransactionsLessons: LessonContent[] = [
   }
 ];
 
-// Bonzo Finance: Intelligent Keeper Agents
-export const bonzoLessons: LessonContent[] = [
-  {
-    id: 'bonzo_lesson_1',
-    courseId: 'course_050',
-    title: 'DeFi 2.0: From Reactive to Proactive',
-    type: 'text',
-    sequence: 1,
-    duration: 5,
-    content: {
-      sections: [
-        {
-          heading: 'The Problem: Static DeFi',
-          text: 'Traditional DeFi vaults are "reactive." They wait for parameters to be hit before acting. If the market crashes in minutes, static parameters can\'t react fast enough to prevent Impermanent Loss or Liquidation.',
-          emoji: '📉'
-        },
-        {
-          heading: 'The Solution: Intelligent Keeper Agents',
-          text: 'Using the Hedera Agent Kit, we can build agents that "think." These agents ingest off-chain data (news, volatility, social sentiment) via RAG or Oracles to make autonomous decisions BEFORE the price moves.',
-          emoji: '🧠'
-        },
-        {
-          heading: 'Bonzo Vaults',
-          text: 'Bonzo Finance provides the infrastructure (Lending Vaults) that our agents will manage. By automating deposits, withdrawals, and rebalances, we can maximize yield while minimizing risk.',
-          emoji: '🏦'
-        }
-      ]
-    }
-  },
-  {
-    id: 'bonzo_lesson_2',
-    courseId: 'course_050',
-    title: 'The Volatility-Aware Rebalancer',
-    type: 'practical',
-    sequence: 2,
-    duration: 12,
-    content: {
-      title: 'Protecting Against Market Volatility',
-      description: 'Experience how an agent monitors Realized Volatility to shift liquidity ranges or withdraw to safety.',
-      objective: 'Configure an agent to autonomously move your HBAR position when volatility spikes above 80%.',
-      steps: [
-        'Deposit HBAR into a Bonzo High-Yield Vault',
-        'Enable the "Volatility Guard" in the Agent Settings',
-        'Observe the Market Index—when volatility spikes, the agent will move your capital to a Stable Vault',
-        'Verify the rebalance transaction on the Hedera Testnet'
-      ],
-      interactiveType: 'bonzo_defi',
-      successMessage: 'Agent successfully safeguarded your capital!',
-      tips: [
-        'Hedera Agent Kit uses SupraOracles for low-latency price and volatility feeds.',
-        'Low Volatility = Tight Ranges (Higher Fees). High Volatility = Wide Ranges or Stables (Safety).'
-      ]
-    }
-  },
-  {
-    id: 'bonzo_lesson_3',
-    courseId: 'course_050',
-    title: 'Sentiment-Based Harvesting (RAG)',
-    type: 'text',
-    sequence: 3,
-    duration: 7,
-    content: {
-      sections: [
-        {
-          heading: 'What is RAG?',
-          text: 'Retrieval Augmented Generation (RAG) allows an AI agent to search through news, social media (Twitter), and governance reports to understand context.',
-          emoji: '🔍'
-        },
-        {
-          heading: 'Social Sentiment in DeFi',
-          text: 'If a reward token is trending negatively on social media, it\'s likely to sell off. An Intelligent Keeper doesn\'t wait for the price to drop—it "reads" the sentiment and harvests/swaps rewards immediately.',
-          emoji: '💬'
-        }
-      ]
-    }
-  },
-  {
-    id: 'bonzo_lesson_4',
-    courseId: 'course_050',
-    title: 'Practical: Sentiment-Driven Harvest',
-    type: 'practical',
-    sequence: 4,
-    duration: 15,
-    content: {
-      title: 'Ingesting News for Alpha',
-      description: 'Simulate an agent that monitors a "News Feed" to time harvests for Bonzo reward tokens.',
-      objective: 'Use the RAG-enabled agent to harvest rewards before a simulated "Bearish News Event" drops the token price.',
-      steps: [
-        'Accumulate USDC rewards in your vault position',
-        'Watch the "Global Crypto Feed"—look for rumors about your reward token',
-        'If sentiment turns Bearish, trigger a "Proactive Harvest"',
-        'Compare your yield to a "Static Schedule" (which would have sold lower)'
-      ],
-      interactiveType: 'bonzo_rag',
-      successMessage: 'Sentiment analysis saved your rewards!',
-      tips: [
-        'The Agent Kit can be integrated with LangChain to processes news via GPT-4 or local LLMs.',
-        'Market sentiment often precedes price action by 30-60 minutes.'
-      ]
-    }
-  },
-  {
-    id: 'bonzo_lesson_5',
-    courseId: 'course_050',
-    title: 'Intent-Based UI: Conversational Yield',
-    type: 'practical',
-    sequence: 5,
-    duration: 15,
-    content: {
-      title: 'Chatting with Your Capital',
-      description: 'Complex DeFi UIs are a barrier. An Intent-Based UI allows users to state goals in plain English.',
-      objective: 'Use the AI Chat Interface to deposit into the best risk-adjusted Bonzo vault using a single sentence.',
-      steps: [
-        'Open the "Agent Intent Chat"',
-        'Type an intent: "Find the safest 5%+ yield for my HBAR and deposit 1 HBAR"',
-        'Review the Agent\'s proposed strategy (Plan)',
-        'Sign the atomic transaction bundle generated by the Hedera Agent Kit'
-      ],
-      interactiveType: 'bonzo_intent',
-      successMessage: 'Intent executed! You are now a DeFi Agent Master.',
-      tips: [
-        'This uses the Vercel AI SDK + Agent Kit to map "Natural Language" to "Smart Contract Calls".',
-        'Intent-based systems are the final destination for Mass Adoption of Web3.'
-      ]
-    }
-  }
-];
+
 
 export function getLessonsForCourse(courseId: string): LessonContent[] {
   if (courseId === 'course_001') return blockchainFundamentalsLessons;
@@ -898,7 +772,7 @@ export function getLessonsForCourse(courseId: string): LessonContent[] {
   if (courseId === 'course_042') return cryptoCommunitiesLessons;
   if (courseId === 'course_043') return advancedSecurityLessons;
   if (courseId === 'course_044') return earningYieldLessons;
-  if (courseId === 'course_050') return bonzoLessons;
+
 
   return [];
 }

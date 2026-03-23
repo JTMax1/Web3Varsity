@@ -107,18 +107,7 @@ export async function markLessonComplete(
   score?: number,
   timeSpentSeconds?: number
 ): Promise<LessonCompleteResult> {
-  // Bypass for hackathon course
-  if (courseId === 'course_050') {
-    const isLastLesson = lessonId === 'bonzo_lesson_2';
-    return {
-      success: true,
-      xpEarned: isLastLesson ? 500 : 100,
-      newLevel: 2,
-      oldLevel: 1,
-      leveledUp: true,
-      courseComplete: isLastLesson,
-    };
-  }
+
 
   try {
     console.log('[markLessonComplete] Starting:', { userId, lessonId, courseId, score });
@@ -487,16 +476,7 @@ export async function getCourseProgress(
   userId: string,
   courseId: string
 ): Promise<CourseProgressData | null> {
-  // Bypass for hackathon course
-  if (courseId === 'course_050') {
-    return {
-      progress_percentage: 0,
-      lessons_completed: 0,
-      total_lessons: 2,
-      current_lesson_id: 'bonzo_lesson_1',
-      completed_at: null,
-    };
-  }
+
 
   const maxRetries = 2;
   let lastError = null;
@@ -589,10 +569,7 @@ export async function updateCurrentLesson(
   courseId: string,
   lessonId: string
 ): Promise<boolean> {
-  // Bypass for hackathon course
-  if (courseId === 'course_050') {
-    return true;
-  }
+
 
   try {
     // First check if user_progress exists and get current lesson

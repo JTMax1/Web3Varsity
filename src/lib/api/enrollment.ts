@@ -75,31 +75,7 @@ export async function enrollInCourse(
   userId: string,
   courseId: string
 ): Promise<EnrollmentResult> {
-  // Bypass for hackathon course
-  if (courseId === 'course_050') {
-    return {
-      success: true,
-      enrollment: {
-        id: 'virtual_enrollment_050',
-        user_id: userId,
-        course_id: 'course_050',
-        enrollment_date: new Date().toISOString(),
-        total_lessons: 2,
-        lessons_completed: 0,
-        progress_percentage: 0,
-        started_at: new Date().toISOString(),
-        completed_at: null,
-        last_accessed_at: new Date().toISOString(),
-        current_lesson_id: 'bonzo_lesson_1',
-        total_quiz_attempts: 0,
-        average_quiz_score: null,
-        certificate_nft_id: null,
-        certificate_minted_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as any,
-    };
-  }
+
 
   try {
     // 1. Check if already enrolled
@@ -244,64 +220,7 @@ export async function getUserEnrollments(userId: string): Promise<UserEnrollment
       );
     }
 
-    const hackathonEnrollment: any = {
-      id: 'virtual_enrollment_050',
-      user_id: userId,
-      course_id: 'course_050',
-      enrollment_date: '2025-01-01T00:00:00.000Z',
-      total_lessons: 2,
-      lessons_completed: 0,
-      progress_percentage: 0,
-      started_at: '2025-01-01T00:00:00.000Z',
-      completed_at: null,
-      last_accessed_at: new Date().toISOString(),
-      current_lesson_id: 'bonzo_lesson_1',
-      total_quiz_attempts: 0,
-      average_quiz_score: null,
-      certificate_nft_id: null,
-      certificate_minted_at: null,
-      created_at: '2025-01-01T00:00:00.000Z',
-      updated_at: new Date().toISOString(),
-      course: {
-        id: 'course_050',
-        title: 'Mastering Bonzo Finance: Intelligent Keeper Agents',
-        description: 'Learn how to build and deploy autonomous "Keeper Agents" using the Hedera Agent Kit to optimize yield and protect capital on Bonzo Finance.',
-        difficulty: 'advanced',
-        track: 'developer',
-        category: 'DeFi',
-        estimated_hours: 4,
-        total_lessons: 2,
-        enrollment_count: 1250,
-        completion_count: 450,
-        average_rating: 5.0,
-        total_ratings: 85,
-        thumbnail_emoji: '🤖',
-        learning_objectives: [
-          'Understand the architecture of Intelligent Keeper Agents',
-          'Learn how to use the Hedera Agent Kit with Bonzo Finance',
-          'Automate DeFi rebalancing to protect capital',
-          'Build and deploy a functional Keeper console'
-        ],
-        what_you_will_learn: [
-          'Hedera Agent Kit Fundamentals',
-          'Bonzo Finance LP integration',
-          'Real-time Market Risk Analysis',
-          'Autonomous Agent Decision Logic'
-        ],
-        completion_xp: 500,
-        created_at: '2025-01-01T00:00:00.000Z',
-        updated_at: new Date().toISOString(),
-        published_at: '2025-01-01T00:00:00.000Z',
-        is_published: true,
-        is_featured: true,
-        is_coming_soon: false
-      }
-    };
-
     const combinedEnrollments = [...(data || [])];
-    if (!combinedEnrollments.some(e => e.course_id === 'course_050')) {
-      combinedEnrollments.unshift(hackathonEnrollment);
-    }
 
     return combinedEnrollments;
   } catch (error) {
@@ -335,28 +254,7 @@ export async function getEnrollmentStatus(
   userId: string,
   courseId: string
 ): Promise<UserProgress | null> {
-  // Bypass for hackathon course
-  if (courseId === 'course_050') {
-    return {
-      id: 'virtual_enrollment_050',
-      user_id: userId,
-      course_id: 'course_050',
-      enrollment_date: new Date().toISOString(),
-      total_lessons: 2,
-      lessons_completed: 0,
-      progress_percentage: 0,
-      started_at: new Date().toISOString(),
-      completed_at: null,
-      last_accessed_at: new Date().toISOString(),
-      current_lesson_id: 'bonzo_lesson_1',
-      total_quiz_attempts: 0,
-      average_quiz_score: null,
-      certificate_nft_id: null,
-      certificate_minted_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as any;
-  }
+
 
   try {
     const { data, error } = await supabase
@@ -554,10 +452,7 @@ export async function getEnrolledCourseIds(userId: string): Promise<string[]> {
 
     const enrolledIds = (data || []).map((item) => item.course_id);
 
-    // Always include the virtual course ID for the demo/hackathon
-    if (!enrolledIds.includes('course_050')) {
-      enrolledIds.push('course_050');
-    }
+
 
     return enrolledIds;
   } catch (error) {
