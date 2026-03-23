@@ -701,7 +701,7 @@ function BadgeCard({ badge, earned, onClaim, isClaiming }: { badge: any; earned:
           disabled={isClaiming}
           className="mt-2 w-full py-2 bg-gradient-to-r from-[#0084C7] to-[#00a8e8] text-white rounded-lg text-xs font-bold hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center"
         >
-          {isClaiming ? 'Claiming...' : 'Claim to Wallet'}
+          {isClaiming ? 'Claiming...' : 'Claim to Wallet'} 
         </button>
       )}
     </div>
