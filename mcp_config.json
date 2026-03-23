@@ -5,11 +5,8 @@
             "type": "stdio",
             "command": "npx",
             "args": [
-                "-y",
-                "@hol-org/hashnet-mcp",
-                "up",
-                "--transport",
-                "stdio"
+                "tsx",
+                "backend/mcp-server.ts"
             ],
             "env": {
                 "REGISTRY_BROKER_API_URL": "https://hol.org/registry/api/v1",
