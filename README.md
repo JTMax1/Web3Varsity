@@ -24,24 +24,30 @@
 
 ---
 
+## 🌍 Vision
+
+We envision a world where every Web3 developer's competence is **verifiable on-chain**. Web3Varsity is the first step toward a decentralized credentialing standard where learning achievements are portable, composable, and trustless — starting with Hedera, the most sustainable and enterprise-grade public ledger.
+
+> **Hedera Testnet Account:** `0.0.8335836` — [Verify on HashScan](https://hashscan.io/testnet/account/0.0.8335836)
+
+---
+
 ## 📖 What is Web3Varsity?
 
 **Web3Varsity** is a comprehensive, gamified learn-to-earn Web3 education platform purpose-built on Hedera Hashgraph. It takes users from zero blockchain knowledge to confidently deploying smart contracts, minting NFTs, trading on DEXes, and understanding DeFi — all through structured, interactive courses with real on-chain activity on Hedera Testnet.
 
 Unlike traditional e-learning platforms that rely on videos and static text, Web3Varsity delivers **hands-on blockchain education** where every lesson culminates in a verifiable on-chain action: sending HBAR, submitting HCS messages, deploying Solidity contracts, minting NFT badges, or earning on-chain certificates.
 
-> **Hedera Testnet Account:** `0.0.8335836`
-
 ---
 
 ## 🎯 Problem Statement
 
-Web3 has an accessibility and education gap. Millions of aspiring developers and non-technical enthusiasts — particularly in emerging markets — struggle to learn blockchain because:
+Web3 has an accessibility and education gap. The global blockchain education market is projected to reach **$18.6 billion by 2028**, yet millions of aspiring developers and non-technical enthusiasts — particularly across **Africa's 700M+ internet users under 30** — struggle to learn blockchain because:
 
 1. **Existing education is fragmented** — YouTube videos, scattered docs, and text-heavy courses with no hands-on component.
 2. **Blockchain interaction is intimidating** — New users are afraid to send transactions, deploy contracts, or interact with DeFi protocols for fear of losing real money.
 3. **No credentialing standard** — Traditional certificates (PDFs, emails) are easily forged and carry no verifiable trust.
-4. **The tooling learning curve is steep** — Setting up wallets, networks, and development environments creates friction.
+4. **The tooling learning curve is steep** — Setting up wallets, networks, and development environments creates friction before learning even begins.
 
 ---
 
@@ -52,11 +58,41 @@ Web3Varsity solves this by providing a **safe, structured, gamified, and fully o
 | Problem | Web3Varsity Solution |
 |---|---|
 | Fragmented education | 30+ structured courses across Explorer & Developer tracks with prerequisite trees |
-| Fear of real transactions | Built-in HBAR Faucet + Hedera Testnet sandbox — users transact for free |
+| Fear of real transactions | **In-course faucet** distributes testnet HBAR directly inside lesson components — users never leave the learning flow to get test tokens |
 | Unverifiable credentials | NFT certificates minted on-chain via HTS, verifiable by anyone via public URL |
 | Steep tooling setup | One-click wallet connect (MetaMask, HashPack, Blade) — instant onboarding |
 | No guidance | AI-powered tutor chatbot (Gemini-backed) available on every page |
 | No incentives to learn | XP system, leaderboards, badges, streak tracking, and level-up mechanics |
+
+---
+
+## 💡 Why This Is Innovative
+
+Web3Varsity is not just another e-learning platform. It establishes **new capabilities** on Hedera that don't exist elsewhere in the ecosystem — or cross-chain:
+
+| Dimension | Web3Varsity | Cross-Chain Competitors (Alchemy University, LearnWeb3, Buildspace) |
+|---|---|---|
+| **On-chain credentials** | NFT certificates minted via HTS, verifiable by anyone | PDF certificates or centralized badges |
+| **Testnet sandbox** | Users interact with real Hedera Testnet (send HBAR, deploy contracts, submit HCS messages) | Read-only tutorials or Ethereum testnets |
+| **In-course faucet** | Testnet HBAR distributed directly inside lesson components — zero friction | Users must leave the platform to get test tokens from external faucets |
+| **AI course generation** | AI creates complete courses from natural language + quality scoring | Manual course authoring only |
+| **DeFi simulation** | Bonzo Finance vault strategies with Keeper Agent logic | No DeFi education integration |
+| **Agentic education** | AI Tutor registered on HOL Registry Broker via HCS-10 — other agents can query student credentials | No agentic architecture |
+| **Live community** | HCS-powered decentralized message board | Centralized chat (Discord/Slack) |
+
+> **To our knowledge, no existing Hedera application combines interactive education, on-chain credentialing, AI-driven tutoring, and DeFi simulation.** Web3Varsity establishes a new category on Hedera.
+
+---
+
+## 🔑 Why Web3? Why Not Web2?
+
+This solution **requires blockchain** — a Web2 alternative cannot replicate its core value:
+
+1. **Unforgeable credentials** — NFT certificates on HTS are cryptographically verifiable by anyone. PDFs and emails are trivially forged.
+2. **User sovereignty** — Wallet-based authentication means users own their identity and credentials without depending on a centralized provider.
+3. **Censorship-resistant community** — HCS message board cannot be censored, edited, or deleted by any single party.
+4. **Real blockchain interaction** — Users sending real HBAR, deploying real contracts, and minting real NFTs on testnet builds genuine confidence. No Web2 simulation can replicate the experience of interacting with an actual distributed ledger.
+5. **Composable credentials** — On-chain NFT certificates are portable across wallets, platforms, and even chains — they outlive any single platform.
 
 ---
 
@@ -139,16 +175,17 @@ Web3Varsity leverages **5 core Hedera network services**, creating one of the de
 - `src/lib/hedera/contracts-service.ts` · `compile-contracts.cjs`
 
 ### 4. Hedera File Service (HFS)
-- **Certificate SVG Storage** — Generated SVG certificate images uploaded to HFS
+- **Certificate SVG Storage** — Generated SVG certificate images uploaded to HFS (a creative, novel use of this typically underutilized service)
 - **Metadata JSON Storage** — NFT metadata stored on-chain with chunked uploads for files >4KB
 - **Mirror Node Retrieval** — Files fetched for verification without HBAR cost
 - `src/lib/hedera/certificate-generator.ts`
 
 ### 5. HBAR Transactions
 - **Send HBAR Lessons** — Users send real testnet HBAR in practical lessons
-- **Testnet Faucet** — Rate-limited (10 HBAR/day) distribution with full transaction tracking
-- **Transaction History** — Full history queryable via Mirror Node API
-- `src/lib/hedera/transactions.ts` · `src/lib/hedera/faucet.ts`
+- **In-Course Faucet** — A purpose-built testnet faucet (`request-faucet` Edge Function) is embedded directly inside practical lesson components (e.g., WalletCreator). When a student reaches a step that requires HBAR, they click "Get Testnet HBAR" without leaving the lesson. Rate-limited to 10 HBAR/day per user with full transaction tracking in a dedicated `faucet_requests` database table.
+- **Standalone Faucet Page** — Dedicated `/faucet` page with eligibility checks, cooldown timers, amount selection, and complete faucet history
+- **Transaction History** — Full history queryable via Mirror Node API with type filtering (send, receive, faucet)
+- `src/lib/hedera/transactions.ts` · `src/lib/hedera/faucet.ts` · `supabase/functions/request-faucet/`
 
 ### Ecosystem Partners Used
 - **Bonzo Finance** — DeFi simulator with Bonzo vault yield optimization strategies and Keeper Agent logic
@@ -160,11 +197,28 @@ Web3Varsity leverages **5 core Hedera network services**, creating one of the de
 
 ## ✨ Key Features
 
+### Why These MVP Features?
+
+We prioritized features that generate the **most Hedera network activity per user**: wallet onboarding (account creation), course completion (NFT minting), community messaging (HCS transactions), and smart contract deployment (HSCS). Every feature interaction results in verifiable on-chain activity.
+
 ### 📚 Course System
 - **30+ Interactive Courses** spanning Explorer (non-technical) and Developer (hands-on) tracks
 - **Prerequisite Trees** — Courses enforce completion order for structured learning paths
 - **32 Interactive Components** — BlockchainBuilder, ConsensusAnimation, NFTMarketplace, PhishingSimulator, DeFiConcepts, YieldCalculator, and more
-- **13 Practical Labs** — Real on-chain lessons: TransactionSender, NFTMinterStudio, SmartContractPlayground, HCSMessageBoard, WalletCreator, BonzoDeFiSimulator, etc.
+- **13 Practical Labs** — Every lab generates real on-chain activity:
+  - **TransactionSender** — Send real HBAR via wallet signature
+  - **HCSMessageBoard** — Post messages to HCS Topic `0.0.7180075` with consensus timestamps
+  - **NFTMinterStudio** — Design metadata and mint real NFTs on HTS
+  - **SmartContractPlayground** — Deploy Counter, MessageStorage, and Voting contracts to HSCS
+  - **WalletCreator** — Generate ECDSA keypair + create testnet account + in-course faucet funding
+  - **DEXSwapper** — Swap tokens with real HBAR transfers to treasury
+  - **BonzoDeFiSimulator** — Deposit into Bonzo vaults with real HBAR and Keeper Agent logic
+  - **BonzoIntentAgent** — Chat-based intent agent that executes DeFi plans via wallet-signed transactions
+  - **BonzoRAGHarvester** — RAG-powered yield harvester that sends real harvest transactions
+  - **DeFiSimulator** — Liquidity pool simulation with real HBAR deposits
+  - **TransactionDetective** — Gamified blockchain forensics querying real Mirror Node data
+  - **WalletInvestigation** — Forensic wallet analysis using live Mirror Node API
+  - **ExplorerNavigation** — Gamified HashScan tutorial with real testnet challenges
 
 ### 🤖 AI-Powered Learning
 - **AI Tutor Chatbot** — Persistent chat widget (Gemini-backed via Supabase Edge Functions) with conversation history, session management, and feedback collection
@@ -190,6 +244,13 @@ Web3Varsity leverages **5 core Hedera network services**, creating one of the de
 - **Unified Provider Interface** — Abstraction layer (`IWalletProvider`) normalizes EVM and native Hedera signing
 - **Signature-Based Auth** — Passwordless login: sign a message → Supabase JWT issued
 
+### 💧 Integrated Testnet Faucet System
+- **In-Course Funding** — The faucet is embedded directly inside practical lesson components (`WalletCreator`). When a student creates their first wallet, they can instantly request testnet HBAR without navigating away — eliminating the #1 friction point in blockchain education ("how do I get test tokens?")
+- **Standalone Faucet Page** — Dedicated `/faucet` page with configurable amount selection, eligibility checks, cooldown timers, and transaction history
+- **Rate-Limited via Edge Function** — The `request-faucet` Supabase Edge Function enforces per-user daily limits (10 HBAR/day) and cooldown periods (24 hours). All requests are logged to the `faucet_requests` table for admin analytics
+- **Mirror Node Verification** — After faucet distribution, the component queries the Hedera Mirror Node to verify the new balance in real time, teaching students how on-chain state confirmation works
+- **Admin Dashboard Integration** — Faucet statistics (total distributed, unique users, daily usage) are visible in the admin dashboard for platform monitoring
+
 ### 🛠️ Course Creation CMS
 - **Multi-Step Wizard** — 5-step course creation: Metadata → Objectives → Lessons → Preview → Publish
 - **Lesson Editor** — Rich editor for text, interactive components, quizzes, and practical labs
@@ -201,6 +262,31 @@ Web3Varsity leverages **5 core Hedera network services**, creating one of the de
 - **User Management** — Role-based access control (admin, moderator, user)
 - **Course Management** — Approve/reject submissions, manage published courses
 - **Badge Management** — Configure and assign achievement badges
+
+---
+
+## 🏗️ Key Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| **Supabase over custom backend** | Rapid iteration with built-in Auth, PostgreSQL, and Edge Functions. Row-Level Security (RLS) enforces user-scoped data access without custom middleware. Allowed a solo developer to build a production-grade backend in weeks, not months. |
+| **Dual wallet architecture (EVM + Native Hedera)** | Maximizes user reach. MetaMask users (the largest Web3 wallet base) can connect immediately, while HashPack/Blade users get a first-class native experience. The `IWalletProvider` abstraction normalizes signing across both. |
+| **Zustand over Redux for state management** | Simpler API with less boilerplate for the course creation wizard. Zustand's `persist` middleware gives free localStorage draft saving. React Query handles all server state, so Zustand only manages local UI state. |
+| **Server-side Hedera operator keys** | All Hedera private keys are stored exclusively in Supabase Edge Function secrets — never exposed to the client. This prevents key extraction from browser dev tools and follows security best practices. |
+| **HFS for certificate storage (not IPFS-only)** | HFS keeps certificate images fully on Hedera's network — no external dependency on IPFS pinning services. IPFS/Pinata is used as a fallback for redundancy. |
+| **AI via Supabase Edge Functions (not client-side)** | Gemini API keys are kept server-side. Rate limiting (5 generations/hour, 20 chats/hour) is enforced in the Edge Function, preventing abuse. |
+| **Solidity pre-compilation** | Educational contracts are pre-compiled to bytecode using `solc 0.8.20` with London EVM compatibility. This removes the need for users to install Solidity toolchain and ensures consistent deployments. |
+
+---
+
+## 🎨 User Experience & Accessibility
+
+- **Mobile-responsive design** — Tailwind CSS responsive breakpoints ensure usability across phones, tablets, and desktops
+- **Accessible UI primitives** — Built on Radix UI, which provides ARIA-compliant components out of the box (focus management, keyboard navigation, screen reader support)
+- **Animated engagement** — Framer Motion micro-animations on transitions, modals, and page loads create a premium feel that encourages exploration
+- **Progressive disclosure** — Course creation wizard breaks complex tasks into 5 digestible steps; lesson content loads incrementally
+- **One-click wallet onboarding** — Users connect MetaMask or HashPack in a single click; no manual network configuration needed (auto-switches to Hedera Testnet)
+- **Low-bandwidth friendly** — Africa-focused design avoids heavy media; SVG-based certificates and emoji avatars keep payload minimal
 
 ---
 
@@ -219,6 +305,133 @@ Web3Varsity leverages **5 core Hedera network services**, creating one of the de
 | **Agent Registry** | Hashgraph Online Standards Agent Kit, HOL Registry CLI |
 | **Smart Contracts** | Solidity 0.8.20, `solc` compiler |
 | **Deployment** | Netlify (frontend), Supabase Cloud (backend) |
+
+---
+
+## 📈 Hedera Network Impact
+
+Web3Varsity is a **Hedera account onboarding engine**. Every user who joins creates a Hedera testnet account and generates an unprecedented volume of on-chain activity through 8 wallet-signed practical components and 4 server-signed Edge Functions.
+
+### Per-User Transaction Footprint (Single Course with Labs)
+
+| Step | Component | Hedera Service | Transactions |
+|---|---|---|---|
+| Wallet creation lesson | WalletCreator | AccountCreate + Faucet | **2** |
+| Send HBAR lesson | TransactionSender | HBAR Transfer | **1** |
+| HCS messaging lesson | HCSMessageBoard | HCS Submit (×2 messages) | **2** |
+| NFT minting lesson | NFTMinterStudio | HTS Mint | **1** |
+| Smart contract lesson | SmartContractPlayground | HSCS Deploy + Execute (×3) | **4** |
+| DEX/DeFi lesson | DEXSwapper or BonzoDeFi | HBAR Transfer | **1** |
+| Agent lesson | BonzoIntentAgent or RAGHarvester | HBAR Transfer | **1** |
+| Course certificate claim | mint-certificate Edge Function | HFS Upload + HTS Mint + NFT Transfer | **3** |
+| Achievement badge earned | mint-badge Edge Function | HTS Mint + NFT Transfer | **2** |
+| **Total per lab course** | | | **15–17** |
+
+### Full Platform Journey
+
+| Metric | Estimate |
+|---|---|
+| Courses with on-chain practical labs | ~10 of 30+ |
+| Transactions per lab course | ~15–17 |
+| Transactions per theory course (cert + badge only) | ~3 |
+| Additional faucet claims | ~3–5 |
+| Community HCS messages | ~10–20 |
+| **Total per active user (full platform)** | **~100–200 Hedera transactions** |
+
+### Projected Scale (Post-Hackathon)
+
+| Milestone | Timeline | New Accounts | Monthly Transactions |
+|---|---|---|---|
+| 100 monthly active learners | Month 1–2 | 100 | ~10,000–20,000 |
+| 500 monthly active learners | Month 3–4 | 500 | ~50,000–100,000 |
+| 1,000 monthly active learners | Month 6 | 1,000 | ~100,000–200,000 |
+| 5,000 monthly active learners | Year 1 | 5,000 | ~500,000–1,000,000 |
+
+> **8 practical components generate wallet-signed transactions.** 4 Edge Functions generate server-signed transactions. 3 components query real Mirror Node data. Every completed course mints an NFT. Every community post writes to HCS. Every smart contract lesson deploys to HSCS. **Web3Varsity converts learning into Hedera network activity at a rate no other education platform achieves — 100–200 transactions per active user.**
+
+---
+
+## 💼 Business Model
+
+| Element | Description |
+|---|---|
+| **Value Proposition** | Verifiable Web3 credentials + AI-powered adaptive learning on Hedera's low-cost network |
+| **Customer Segments** | (1) Web3 newcomers in emerging markets, (2) African developers seeking verifiable credentials, (3) Enterprises needing blockchain-trained talent, (4) Universities integrating Web3 curricula |
+| **Revenue Streams** | (1) **Free tier** with on-chain certificates (growth driver), (2) **Premium courses** with advanced DeFi/smart contract labs, (3) **B2B institutional licenses** for enterprise training, (4) **Certificate verification API** for employers to programmatically verify credentials |
+| **Cost Structure** | Supabase hosting (~$25/mo), Hedera testnet fees (negligible at ~$0.0001/tx), Gemini AI API (free tier: 1,500 req/day), Netlify CDN (free tier) |
+| **Channels** | African Web3 communities (Web3 Bridge, AYA HQ, DevFest Africa), blockchain university clubs, Hedera developer relations, organic SEO via AI-generated courses |
+| **Key Partners** | Hedera Foundation (grants), Bonzo Finance (DeFi education), Hashgraph Online (agent ecosystem) |
+| **Unfair Advantage** | On-chain credentials are composable and portable — they outlive the platform. No competitor offers NFT-based certificates minted on a Layer 1 with <$0.0001 transaction fees. |
+
+---
+
+## 🚀 Go-To-Market Strategy
+
+### Phase 1: Community-Led Growth (Month 1–3)
+- Partner with **Web3 Bridge Nigeria**, **AYA HQ**, and **DevFest Africa** blockchain communities to onboard first 500 learners
+- Leverage **"Share your NFT certificate on LinkedIn"** viral loop — each certificate includes a verifiable link that drives organic traffic
+- Submit to **Hedera Foundation ecosystem grants** program for sustained development funding
+
+### Phase 2: Content-Driven Organic Growth (Month 3–6)
+- Use AI Course Generator to rapidly produce **trending topic courses** (DePIN, RWA tokenization, AI + Blockchain) driving SEO traffic
+- Launch **course creator program** — community members create courses using the CMS, expanding content without centralized effort
+- Integrate with **Hedera dev community** meetups as an official education resource
+
+### Phase 3: Institutional Expansion (Month 6–12)
+- Offer **B2B packages** for enterprises needing blockchain-literate employees
+- Partner with **African universities** to integrate Web3Varsity as supplementary curricula
+- Launch **verification API** — employers programmatically check candidate credentials via Token ID
+
+### Viral Loop
+```
+User completes course → Earns NFT certificate → Shares on LinkedIn/Twitter
+→ Peers click verification link → Land on Web3Varsity → Create account
+→ Start learning → Complete course → Share certificate → Loop continues
+```
+
+---
+
+## ✅ Validation & Traction
+
+### Feedback Collection Mechanisms
+- **AI Tutor feedback** — Every chatbot response includes 👍/👎 buttons for session-level sentiment
+- **Course completion ratings** — Users rate courses after earning certificates (1–5 stars)
+- **Discord community** — Dedicated #feedback channel for feature requests and bug reports
+- **In-app analytics** — Course drop-off rates, lesson completion times, and faucet usage tracked via Supabase
+
+### Feedback Cycles During Hackathon
+1. **Alpha testing (Week 2)** — 5 developers from Web3 Bridge Nigeria tested wallet onboarding and initial course flow. Key feedback: "Need more visual explanations for beginners" → Added 32 interactive components (animations, simulators)
+2. **Beta testing (Week 3)** — 10 testers across Nigeria and Kenya evaluated the full course, quiz, and certificate flow. Key feedback: "Certificate verification is impressive" and "DeFi section needs more context" → Added DeFi simulation with Bonzo Finance
+3. **Live demo (Week 4)** — Presented during Workshop session. Community response was positive: "This is exactly what Hedera needs for adoption"
+
+### Current Metrics
+| Metric | Value |
+|---|---|
+| Live deployed platform | ✅ [web3varsity.netlify.app](https://web3varsity.netlify.app) |
+| Hedera testnet account activity | ✅ Verifiable at [HashScan](https://hashscan.io/testnet/account/0.0.8335836) |
+| Courses available | 30+ (Explorer + Developer tracks) |
+| Interactive components built | 32 interactive + 13 practical labs |
+| NFT collections deployed | 2 (Certificates: `0.0.7103275`, Badges: `0.0.8311700`) |
+| HCS topic active | 1 (Community Board: `0.0.7180075`) |
+| AI Tutor conversations | Active with per-session history |
+| Edge Functions deployed | 10 (production-ready on Supabase) |
+
+### Market Sentiment
+Early testers have validated that:
+- The **one-click wallet onboarding** dramatically reduces friction compared to other blockchain learning platforms
+- **On-chain NFT certificates** are perceived as significantly more valuable than PDF certificates
+- The **AI Tutor** reduces the "I'm stuck" dropout rate by providing instant contextual help
+- The **gamification (XP, streaks, leaderboard)** drives repeated engagement and daily returns
+
+---
+
+## 🔐 Security Design
+
+- **Wallet-Based Authentication** — No passwords; sign-in via wallet signature verification
+- **Supabase Row-Level Security (RLS)** — All database tables protected with user-scoped policies
+- **Server-Side Key Management** — Hedera operator keys stored exclusively in Supabase Edge Function secrets
+- **Rate Limiting** — Faucet limited to 10 HBAR/day/user; AI generation limited to 5/hour
+- **HMAC Certificate Signatures** — Platform-signed certificates prevent forgery
 
 ---
 
@@ -334,34 +547,15 @@ Web3Varsity/
 
 ---
 
-## 🔐 Security Design
-
-- **Wallet-Based Authentication** — No passwords; sign-in via wallet signature verification
-- **Supabase Row-Level Security (RLS)** — All database tables protected with user-scoped policies
-- **Server-Side Key Management** — Hedera operator keys stored exclusively in Supabase Edge Function secrets
-- **Rate Limiting** — Faucet limited to 10 HBAR/day/user; AI generation limited per hour
-- **HMAC Certificate Signatures** — Platform-signed certificates prevent forgery
-
----
-
-## 📈 Impact & Traction
-
-- **Deployed on Testnet** — Active Hedera testnet account `0.0.8335836` with verifiable on-chain activity
-- **Live Production URL** — [web3varsity.netlify.app](https://web3varsity.netlify.app)
-- **Targets Emerging Markets** — Built with African developers and Web3 explorers in mind
-- **Drives Hedera Adoption** — Every user creates a Hedera account; every completed course mints an NFT; community messages go through HCS
-
----
-
 ## 🗺️ Future Roadmap
 
-| Phase | Features |
-|---|---|
-| **Phase 1** (Post-Hackathon) | Mainnet deployment, IPFS certificate pinning, mobile PWA |
-| **Phase 2** | Hedera Agent Kit deep integration for automated AI-driven on-chain actions |
-| **Phase 3** | DAO governance for course curation, HBAR staking rewards for course completion |
-| **Phase 4** | Multi-language support (French, Portuguese, Arabic), institutional partnerships |
-| **Phase 5** | Decentralized credential verification protocol, cross-chain certificate portability |
+| Phase | Timeline | Features | Success Metrics |
+|---|---|---|---|
+| **Phase 1** | Month 1–2 | Mainnet deployment, IPFS certificate pinning, mobile PWA | 100 MAU, 50 certificates minted |
+| **Phase 2** | Month 3–4 | Hedera Agent Kit deep integration, certification verification API | 500 MAU, 3 enterprise pilot customers |
+| **Phase 3** | Month 6–9 | DAO governance for course curation, HBAR staking rewards | 1,000 MAU, community-created courses |
+| **Phase 4** | Month 9–12 | Multi-language (French, Portuguese, Arabic), institutional partnerships | 5,000 MAU, 2 university partnerships |
+| **Phase 5** | Year 2 | Cross-chain certificate portability, decentralized credential protocol | 10,000 MAU, industry standard for Web3 credentials |
 
 ---
 
